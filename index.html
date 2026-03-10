@@ -434,29 +434,24 @@ function hideLoading(){
 }
 
 // ─── BOOT ───
-let appLoaded = false;
-
 async function boot() {
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event==='SIGNED_IN' && session && !appLoaded) {
-      appLoaded = true;
-      await enterApp(session.user);
-    } else if (event==='SIGNED_OUT') {
-      appLoaded = false;
-      creds=[]; tabs=[]; currentUser=null;
-      hide('app-screen'); show('auth-screen'); hide('loading');
-      // Clean URL
-      history.replaceState(null, '', window.location.pathname);
-    }
-  });
-
   const { data:{ session } } = await sb.auth.getSession();
-  if (session && !appLoaded) {
-    appLoaded = true;
+  if (session) {
     await enterApp(session.user);
-  } else if (!session) {
+  } else {
     hide('loading'); show('auth-screen');
   }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session && !currentUser) {
+      await enterApp(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      creds=[]; tabs=[]; currentUser=null;
+      hide('app-screen');
+      history.replaceState(null, '', window.location.pathname);
+      show('auth-screen');
+    }
+  });
 }
 
 async function enterApp(user) {
