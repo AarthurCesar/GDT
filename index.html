@@ -1026,8 +1026,18 @@ function getAccount() {
   return raw ? JSON.parse(raw) : null;
 }
 
-function saveAccount(user, pass) {
-  localStorage.setItem('vaultkey_account', JSON.stringify({ user, pass }));
+function saveAccount(user, passHash) {
+  localStorage.setItem('vaultkey_account', JSON.stringify({ user, pass: passHash }));
+}
+
+// Hash simples e confiável, sem btoa (que quebra com caracteres especiais)
+function hashPass(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash = hash & 0xffffffff;
+  }
+  return 'vk_' + Math.abs(hash).toString(36) + '_' + str.length;
 }
 
 // ═══════════════════════════════════════════
@@ -1038,6 +1048,16 @@ function init() {
   if (!acc) {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('setup-form').style.display = 'block';
+  } else {
+    // Migrar conta antiga que usava btoa
+    if (acc.pass && !acc.pass.startsWith('vk_')) {
+      // conta antiga detectada — pede para recriar
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('setup-form').style.display = 'block';
+      document.getElementById('login-error').textContent = '⚠️ Conta antiga detectada. Recrie seu login abaixo.';
+      document.getElementById('login-error').style.display = 'block';
+      localStorage.removeItem('vaultkey_account');
+    }
   }
 }
 
@@ -1045,12 +1065,13 @@ function setupAccount() {
   const user = document.getElementById('setup-user').value.trim();
   const pass = document.getElementById('setup-pass').value;
   const conf = document.getElementById('setup-confirm').value;
-  if (!user || pass.length < 8) { showToast('Usuário e senha (mín. 8 chars) obrigatórios.', 'error'); return; }
+  if (!user || pass.length < 4) { showToast('Usuário e senha (mín. 4 chars) obrigatórios.', 'error'); return; }
   if (pass !== conf) { showToast('Senhas não conferem!', 'error'); return; }
-  saveAccount(user, btoa(pass));
+  saveAccount(user, hashPass(pass));
   document.getElementById('setup-form').style.display = 'none';
   document.getElementById('login-form').style.display = 'block';
   document.getElementById('login-user').value = user;
+  document.getElementById('login-error').style.display = 'none';
   showToast('Conta criada! Faça login.', 'success');
 }
 
@@ -1060,10 +1081,18 @@ function doLogin() {
   const pass = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
 
-  if (!acc || user !== acc.user || btoa(pass) !== acc.pass) {
+  if (!acc) {
+    err.textContent = 'Nenhuma conta encontrada. Crie uma conta primeiro.';
     err.style.display = 'block';
     return;
   }
+
+  if (user.toLowerCase() !== acc.user.toLowerCase() || hashPass(pass) !== acc.pass) {
+    err.textContent = 'Usuário ou senha incorretos.';
+    err.style.display = 'block';
+    return;
+  }
+
   err.style.display = 'none';
   load();
   document.getElementById('login-screen').style.display = 'none';
@@ -1085,10 +1114,10 @@ function changePassword() {
   const cur = document.getElementById('cur-pass').value;
   const nw  = document.getElementById('new-pass').value;
   const nw2 = document.getElementById('new-pass2').value;
-  if (btoa(cur) !== acc.pass) { showToast('Senha atual incorreta.', 'error'); return; }
-  if (nw.length < 8) { showToast('Nova senha precisa ter mínimo 8 chars.', 'error'); return; }
+  if (hashPass(cur) !== acc.pass) { showToast('Senha atual incorreta.', 'error'); return; }
+  if (nw.length < 4) { showToast('Nova senha precisa ter mínimo 4 chars.', 'error'); return; }
   if (nw !== nw2) { showToast('Senhas não conferem.', 'error'); return; }
-  saveAccount(acc.user, btoa(nw));
+  saveAccount(acc.user, hashPass(nw));
   showToast('Senha alterada com sucesso!', 'success');
   ['cur-pass','new-pass','new-pass2'].forEach(id => document.getElementById(id).value = '');
 }
