@@ -25,7 +25,7 @@
     }
     /* ═══ LIGHT THEME ═══ */
     [data-theme="light"]{
-      --bg:#f0f0f7;--surface:#ffffff;--surface2:#e8e8f0;--border:#a0a0b8;
+      --bg:#e8e8f2;--surface:#ffffff;--surface2:#ededf5;--border:#8080a8;
       --accent:#7c5cfc;--accent2:#9333ea;--green:#16a34a;--red:#dc2626;
       --text:#0f0f1a;--muted:#6b7280;
       --noise-opacity:.15;
@@ -33,7 +33,7 @@
     /* System preference fallback (used when data-theme="system") */
     @media(prefers-color-scheme:light){
       [data-theme="system"]{
-        --bg:#f0f0f7;--surface:#ffffff;--surface2:#e8e8f0;--border:#a0a0b8;
+        --bg:#e8e8f2;--surface:#ffffff;--surface2:#ededf5;--border:#8080a8;
         --accent:#7c5cfc;--accent2:#9333ea;--green:#16a34a;--red:#dc2626;
         --text:#0f0f1a;--muted:#6b7280;
         --noise-opacity:.15;
@@ -507,7 +507,6 @@ function hideLoading(){
 
 // ─── BOOT ───
 async function boot() {
-  console.log('[GDT] boot start');
 
   // Listener só para logout
   sb.auth.onAuthStateChange((event, session) => {
@@ -523,13 +522,11 @@ async function boot() {
     await new Promise(r => setTimeout(r, 500));
     try {
       const { data:{ session } } = await sb.auth.getSession();
-      console.log('[GDT] getSession attempt', i+1, !!session, session?.user?.email);
       if (session?.user && session?.access_token) {
         await enterApp(session.user);
         return;
       }
     } catch(e) {
-      console.warn('[GDT] getSession error:', e.message);
     }
   }
 
@@ -538,18 +535,14 @@ async function boot() {
 }
 
 async function enterApp(user) {
-  console.log('[GDT] enterApp start', user.email);
   currentUser = user;
   hide('loading'); hide('auth-screen'); show('app-screen');
   loadTheme();
   document.getElementById('topbar-email').textContent = user.email;
   document.getElementById('settings-email').textContent = user.email;
-  console.log('[GDT] calling loadData...');
   await loadData();
-  console.log('[GDT] loadData done, tabs:', tabs.length, 'creds:', creds.length);
   rebuildTabPages();
   renderSidebar(); renderAll(); renderDashboard();
-  console.log('[GDT] enterApp complete ✅');
   _booting = false;
 }
 
@@ -559,37 +552,37 @@ async function fetchWithTimeout(promise, ms=8000){
 }
 
 async function loadData() {
-  console.log('[GDT] loadData: fetching tabs...');
   let tabData = [], tabErr = null;
   try {
     const res = await fetchWithTimeout(sb.from('tabs').select('*').order('created_at',{ascending:true}));
     tabData = res.data || [];
     tabErr = res.error;
   } catch(e) {
-    console.warn('[GDT] tabs fetch failed/timeout:', e.message);
     tabData = [];
   }
-  console.log('[GDT] tabs result:', tabData, tabErr);
   tabs = tabData.map(r=>({id:r.id,name:r.name,icon:r.icon||'📁'}));
-
-  console.log('[GDT] loadData: fetching credentials...');
   let data = [], error = null;
   try {
     const res = await fetchWithTimeout(sb.from('credentials').select('*').order('created_at',{ascending:false}));
     data = res.data || [];
     error = res.error;
   } catch(e) {
-    console.warn('[GDT] creds fetch failed/timeout:', e.message);
     data = [];
   }
-  console.log('[GDT] creds result:', data, error);
   if (error) { showToast('Erro ao carregar: '+error.message); return; }
-  creds = (data||[]).map(r=>({
-    id:r.id, name:r.name||r.login, icon:r.icon||null,
-    tabId: r.tab_name ? (tabs.find(t=>t.name===r.tab_name)?.id || null) : null,
-    tabName:r.tab_name||null,
-    login:r.login||'', pass:r.pass||'', notes:r.notes||'', createdAt:r.created_at
+  // Descriptografa cada credencial
+  const decrypted = await Promise.all((data||[]).map(async r => {
+    const login = await decrypt(r.login||'');
+    const pass  = await decrypt(r.pass||'');
+    const notes = await decrypt(r.notes||'');
+    return {
+      id:r.id, name:r.name||login, icon:r.icon||null,
+      tabId: r.tab_name ? (tabs.find(t=>t.name===r.tab_name)?.id || null) : null,
+      tabName:r.tab_name||null,
+      login, pass, notes, createdAt:r.created_at
+    };
   }));
+  creds = decrypted;
   creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
 }
 
@@ -602,6 +595,7 @@ async function doGoogleLogin() {
   if(error) showAlert('auth-error', error.message);
 }
 async function doLogout(){
+  _cryptoKey = null; // limpa chave da memória
   await sb.auth.signOut({ scope: 'local' });
 }
 
@@ -646,6 +640,53 @@ function toggleOptional(){
   document.getElementById('optional-section').classList.toggle('open');
 }
 
+// ═══ CRIPTOGRAFIA AES-256-GCM ═══
+let _cryptoKey = null;
+
+async function getCryptoKey() {
+  if (_cryptoKey) return _cryptoKey;
+  // Deriva chave do user_id (único e estável por usuário)
+  const encoder = new TextEncoder();
+  const seed = encoder.encode(currentUser.id + '-gdt-vault');
+  const keyMaterial = await crypto.subtle.importKey('raw', seed, 'PBKDF2', false, ['deriveKey']);
+  _cryptoKey = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: encoder.encode('gdt-salt-v1'), iterations:100000, hash:'SHA-256' },
+    keyMaterial,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+  return _cryptoKey;
+}
+
+async function encrypt(text) {
+  if (!text) return '';
+  const key = await getCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(text);
+  const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, encoded);
+  // Junta iv + cipher em base64
+  const combined = new Uint8Array(iv.byteLength + cipher.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(cipher), iv.byteLength);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decrypt(b64) {
+  if (!b64) return '';
+  // Se não começa com formato base64 válido, é texto antigo não cifrado
+  try {
+    const key = await getCryptoKey();
+    const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const iv = combined.slice(0, 12);
+    const cipher = combined.slice(12);
+    const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, cipher);
+    return new TextDecoder().decode(plain);
+  } catch {
+    return b64; // fallback: retorna original (dados antigos não cifrados)
+  }
+}
+
 async function saveCred() {
   const login = document.getElementById('cred-login').value.trim();
   const pass  = document.getElementById('cred-pass').value;
@@ -657,15 +698,20 @@ async function saveCred() {
   const icon = selEmoji || (tabObj ? tabObj.icon : '🔑');
   const editId = document.getElementById('edit-cred-id').value;
 
+  // Criptografa antes de enviar ao Supabase
+  const encPass   = await encrypt(pass);
+  const encLogin  = await encrypt(login);
+  const encNotes  = await encrypt(document.getElementById('cred-notes').value.trim());
+
   const payload = {
     user_id: currentUser.id,
     name: login,
     icon,
     tab_name: tabObj ? tabObj.name : null,
     tab_icon: tabObj ? tabObj.icon : null,
-    login,
-    pass,
-    notes: document.getElementById('cred-notes').value.trim(),
+    login:  encLogin,
+    pass:   encPass,
+    notes:  encNotes,
     url: null,
   };
 
