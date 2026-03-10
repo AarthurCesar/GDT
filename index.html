@@ -850,9 +850,13 @@ async function copyVal(text,btn){
   try{await navigator.clipboard.writeText(text);const o=btn.textContent;btn.textContent='✅';setTimeout(()=>btn.textContent=o,1400);}
   catch{toast('Não foi possível copiar.','error');}
 }
+function getCredVal(id, field){
+  // Try store first, fallback to creds array
+  return credStore[id]?.[field] ?? creds.find(c=>c.id===id)?.[field] ?? '';
+}
 async function copyFromStore(id, field, btn){
   try{
-    const text = credStore[id]?.[field] || '';
+    const text = getCredVal(id, field);
     await navigator.clipboard.writeText(text);
     const o=btn.textContent; btn.textContent='✅'; setTimeout(()=>btn.textContent=o,1400);
   } catch{ toast('Não foi possível copiar.','error'); }
@@ -860,7 +864,7 @@ async function copyFromStore(id, field, btn){
 function revealFromStore(id){
   const el=document.getElementById('pv-'+id); if(!el) return;
   if(el.textContent==='••••••••'){
-    el.textContent = credStore[id]?.pass || '';
+    el.textContent = getCredVal(id, 'pass');
   } else {
     el.textContent = '••••••••';
   }
