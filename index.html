@@ -511,14 +511,16 @@ let _booting = false; // lock para evitar duplo enterApp
 async function boot() {
   console.log('[GDT] boot start');
 
-  // Registra listener ANTES de tudo
+  // SIGNED_IN = OAuth redirect ou token renovado com sessão válida
+  // Não usar INITIAL_SESSION pois o token ainda não está pronto
   sb.auth.onAuthStateChange(async (event, session) => {
     console.log('[GDT] authStateChange:', event, !!session);
-    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && !currentUser && !_booting) {
+    if (event === 'SIGNED_IN' && session) {
+      if (_booting || currentUser) return; // já está carregando
       _booting = true;
       history.replaceState(null, '', window.location.pathname);
       await enterApp(session.user);
-    } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+    } else if (event === 'SIGNED_OUT') {
       _booting = false;
       creds=[]; tabs=[]; currentUser=null;
       hide('app-screen');
@@ -526,18 +528,17 @@ async function boot() {
     }
   });
 
-  // Aguarda o onAuthStateChange processar INITIAL_SESSION
-  await new Promise(r => setTimeout(r, 800));
+  // Aguarda SIGNED_IN processar (vem do hash OAuth ou sessão salva)
+  await new Promise(r => setTimeout(r, 1200));
 
-  // Se ainda não logou, tenta getSession como fallback
+  // Fallback: se SIGNED_IN não disparou, tenta getSession manualmente
   if (!currentUser && !_booting) {
     console.log('[GDT] fallback: getSession');
     try {
-      const { data:{ session }, error } = await sb.auth.getSession();
-      console.log('[GDT] getSession result:', !!session, error?.message);
+      const { data:{ session } } = await sb.auth.getSession();
+      console.log('[GDT] getSession result:', !!session);
       if (session) {
         _booting = true;
-        history.replaceState(null, '', window.location.pathname);
         await enterApp(session.user);
       } else {
         hide('loading'); show('auth-screen');
