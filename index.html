@@ -348,6 +348,18 @@
   </div>
 </div>
 
+<!-- MODAL CONFIRM GENÉRICO -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" id="modal-confirm-title">Confirmar</div>
+    <div style="font-size:14px;color:var(--muted);font-family:var(--mono);margin:14px 0 22px;line-height:1.7;" id="modal-confirm-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="btn-confirm-ok" onclick="confirmOk()">Confirmar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DELETAR ABA -->
 <div class="modal-overlay" id="modal-delete-tab">
   <div class="modal" style="max-width:380px;">
@@ -567,15 +579,17 @@ async function saveCred() {
 }
 
 async function deleteCred(id) {
-  if(!confirm('Deletar esta senha?')) return;
   const c = creds.find(x=>x.id===id);
   const tabId = c?.tabId;
-  const {error}=await sb.from('credentials').delete().eq('id',id);
-  if(error){toast('Erro ao deletar.','error');return;}
-  await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard();
-  // Restore the page the user was on
-  restorePage();
-  toast('Removida.','success');
+  showConfirm('🗑️ Deletar Senha',
+    'Tem certeza que deseja deletar a senha de "' + (c?.login||'') + '"? Esta ação não pode ser desfeita.',
+    async () => {
+      const {error}=await sb.from('credentials').delete().eq('id',id);
+      if(error){toast('Erro ao deletar.','error');return;}
+      await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard();
+      restorePage();
+      toast('Senha removida.','success');
+    });
 }
 
 // ─── TAB MODAL ───
@@ -817,6 +831,19 @@ function show(id){const el=document.getElementById(id);el.style.display='';el.cl
 function hide(id){const el=document.getElementById(id);el.classList.remove('active');if(el.id==='loading')el.style.display='none';}
 function toggleEye(inputId,btn){const inp=document.getElementById(inputId);inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'👁':'🙈';}
 function revealPass(id,pass){const el=document.getElementById('pv-'+id);el.textContent=el.textContent==='••••••••'?pass:'••••••••';}
+// ─── CONFIRM MODAL ───
+let _confirmCallback = null;
+function showConfirm(title, msg, cb){
+  document.getElementById('modal-confirm-title').textContent = title;
+  document.getElementById('modal-confirm-msg').textContent = msg;
+  _confirmCallback = cb;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+function confirmOk(){
+  closeModal('modal-confirm');
+  if(_confirmCallback) { _confirmCallback(); _confirmCallback=null; }
+}
+
 async function copyVal(text,btn){
   try{await navigator.clipboard.writeText(text);const o=btn.textContent;btn.textContent='✅';setTimeout(()=>btn.textContent=o,1400);}
   catch{toast('Não foi possível copiar.','error');}
