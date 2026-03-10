@@ -229,7 +229,7 @@
     </div>
     <div class="field" style="text-align:left;">
       <label>Código de verificação</label>
-      <input type="text" id="master-code" placeholder="000000" maxlength="6"
+      <input type="text" id="master-code" placeholder="Ex: A3KX9TQZ" maxlength="8"
         style="font-size:24px;letter-spacing:8px;text-align:center;font-family:var(--mono);"
         onkeydown="if(event.key==='Enter')submitMasterCode()"/>
     </div>
@@ -248,7 +248,7 @@
     </div>
     <div class="field" style="text-align:left;">
       <label>Código de verificação</label>
-      <input type="text" id="master-code-return" placeholder="000000" maxlength="6"
+      <input type="text" id="master-code-return" placeholder="Ex: A3KX9TQZ" maxlength="8"
         style="font-size:24px;letter-spacing:8px;text-align:center;font-family:var(--mono);"
         onkeydown="if(event.key==='Enter')submitReturnCode()"/>
     </div>
@@ -522,7 +522,9 @@ async function decryptText(b64) {
 let pendingOtp = null;
 
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars (0,O,1,I)
+  const arr = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(arr).map(b => chars[b % chars.length]).join('');
 }
 
 function getDeviceKey() {
@@ -608,11 +610,21 @@ function goToStep2() {
 function goBackStep1() { showStep(1); }
 
 async function submitMasterCode() {
-  const code = document.getElementById('master-code').value.trim();
+  const code = document.getElementById('master-code').value.trim().toUpperCase();
   const errEl = document.getElementById('master-error');
   errEl.style.display = 'none';
 
-  if (code !== pendingOtp) {
+  if (code.length < 6) {
+    errEl.textContent = 'Digite o código completo.';
+    errEl.style.display = 'block'; return;
+  }
+
+  setBtnLoad('btn-master-ok', true, 'Verificando...');
+  const { data } = await sb.from('user_settings').select('value')
+    .eq('user_id', currentUser.id).eq('key', 'otp_code').maybeSingle();
+  setBtnLoad('btn-master-ok', false, 'Verificar e Entrar');
+
+  if (!data?.value || code !== data.value) {
     errEl.textContent = '❌ Código incorreto. Tente novamente.';
     errEl.style.display = 'block'; return;
   }
