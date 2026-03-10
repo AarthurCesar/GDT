@@ -435,11 +435,9 @@ function hideLoading(){
 
 // ─── BOOT ───
 async function boot() {
-  const { data:{ session } } = await sb.auth.getSession();
-  if (session) {
-    await enterApp(session.user);
-  } else {
-    hide('loading'); show('auth-screen');
+  // Limpa URL se vier com hash do OAuth
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname);
   }
 
   sb.auth.onAuthStateChange(async (event, session) => {
@@ -448,10 +446,22 @@ async function boot() {
     } else if (event === 'SIGNED_OUT') {
       creds=[]; tabs=[]; currentUser=null;
       hide('app-screen');
-      history.replaceState(null, '', window.location.pathname);
       show('auth-screen');
     }
   });
+
+  const { data:{ session }, error } = await sb.auth.getSession();
+  if (error) {
+    // Sessão corrompida — limpa tudo e mostra login
+    await sb.auth.signOut();
+    hide('loading'); show('auth-screen');
+    return;
+  }
+  if (session) {
+    await enterApp(session.user);
+  } else {
+    hide('loading'); show('auth-screen');
+  }
 }
 
 async function enterApp(user) {
