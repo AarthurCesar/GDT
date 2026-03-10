@@ -525,8 +525,8 @@ async function boot() {
 
 async function enterApp(user) {
   currentUser = user;
-  await loadTheme();
   hide('loading'); hide('auth-screen'); show('app-screen');
+  loadTheme(); // async, don't await — never blocks render
   document.getElementById('topbar-email').textContent = user.email;
   document.getElementById('settings-email').textContent = user.email;
   await loadData();
@@ -1018,14 +1018,16 @@ function setTheme(theme){
 }
 
 async function loadTheme(){
-  // First try localStorage (instant, no flash)
-  const local = localStorage.getItem('gdt-theme');
-  if(local){ applyTheme(local); return; }
-  // Then Supabase if logged in
-  if(currentUser){
-    const {data} = await sb.from('user_settings').select('value').eq('user_id',currentUser.id).eq('key','theme').single();
-    if(data){ localStorage.setItem('gdt-theme',data.value); applyTheme(data.value); return; }
-  }
+  try {
+    // First try localStorage (instant, no flash)
+    const local = localStorage.getItem('gdt-theme');
+    if(local){ applyTheme(local); return; }
+    // Then Supabase if logged in
+    if(currentUser){
+      const {data} = await sb.from('user_settings').select('value').eq('user_id',currentUser.id).eq('key','theme').maybeSingle();
+      if(data){ localStorage.setItem('gdt-theme',data.value); applyTheme(data.value); return; }
+    }
+  } catch(e){ /* ignore */ }
   // Default: system
   applyTheme('system');
 }
