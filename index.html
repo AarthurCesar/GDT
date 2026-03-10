@@ -686,7 +686,7 @@ function renderCredList(list, containerId) {
     return;
   }
   el.innerHTML = list.map(c=>`
-    <div class="cred-card">
+    <div class="cred-card" data-id="${c.id}">
       <div class="cred-card-header">
         <div class="cred-card-icon">${c.icon||'🔑'}</div>
         <div class="cred-card-title">
@@ -698,22 +698,48 @@ function renderCredList(list, containerId) {
         <div class="cred-field-label">Login</div>
         <div class="cred-field-row">
           <span>${esc(c.login)}</span>
-          <button class="copy-btn" onclick="copyFromStore('${c.id}','login',this)" title="Copiar login">📋</button>
+          <button class="copy-btn" data-action="copy-login" title="Copiar login">📋</button>
         </div>
       </div>
       <div class="cred-field-block">
         <div class="cred-field-label">Senha</div>
         <div class="cred-field-row">
-          <span id="pv-${c.id}">••••••••</span>
-          <button class="copy-btn" onclick="copyFromStore('${c.id}','pass',this)" title="Copiar senha">📋</button>
-          <button class="copy-btn" onclick="revealFromStore('${c.id}')" title="Ver senha">👁</button>
+          <span class="pass-display">••••••••</span>
+          <button class="copy-btn" data-action="copy-pass" title="Copiar senha">📋</button>
+          <button class="copy-btn" data-action="reveal" title="Ver senha">👁</button>
         </div>
       </div>
       <div class="cred-card-actions">
-        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c.id}')">✏️ Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCred('${c.id}')">🗑 Deletar</button>
+        <button class="btn btn-secondary btn-sm" data-action="edit">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" data-action="delete">🗑 Deletar</button>
       </div>
     </div>`).join('');
+
+  // Attach events via delegation on the container
+  el.onclick = async (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const card = btn.closest('[data-id]');
+    if (!card) return;
+    const id = card.dataset.id;
+    const action = btn.dataset.action;
+    const c = creds.find(x=>x.id===id);
+    if (!c) return;
+    if (action==='copy-login') {
+      await navigator.clipboard.writeText(c.login);
+      const o=btn.textContent; btn.textContent='✅'; setTimeout(()=>btn.textContent=o,1400);
+    } else if (action==='copy-pass') {
+      await navigator.clipboard.writeText(c.pass);
+      const o=btn.textContent; btn.textContent='✅'; setTimeout(()=>btn.textContent=o,1400);
+    } else if (action==='reveal') {
+      const span = card.querySelector('.pass-display');
+      span.textContent = span.textContent==='••••••••' ? c.pass : '••••••••';
+    } else if (action==='edit') {
+      openEditModal(id);
+    } else if (action==='delete') {
+      deleteCred(id);
+    }
+  };
 }
 
 function renderAll(){
