@@ -434,21 +434,29 @@ function hideLoading(){
 }
 
 // ─── BOOT ───
-async function boot() {
-  // Fix double hash from OAuth redirect (##access_token)
-  if (window.location.hash.includes('access_token')) {
-    const fixed = window.location.hash.replace(/^#+/, '#');
-    history.replaceState(null, '', window.location.pathname + fixed);
-  }
+let appLoaded = false;
 
+async function boot() {
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event==='SIGNED_IN' && session && !currentUser) { await enterApp(session.user); }
-    else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; currentUser=null; hide('app-screen'); show('auth-screen'); hide('loading'); }
+    if (event==='SIGNED_IN' && session && !appLoaded) {
+      appLoaded = true;
+      await enterApp(session.user);
+    } else if (event==='SIGNED_OUT') {
+      appLoaded = false;
+      creds=[]; tabs=[]; currentUser=null;
+      hide('app-screen'); show('auth-screen'); hide('loading');
+      // Clean URL
+      history.replaceState(null, '', window.location.pathname);
+    }
   });
 
   const { data:{ session } } = await sb.auth.getSession();
-  if (session) { await enterApp(session.user); }
-  else { hide('loading'); show('auth-screen'); }
+  if (session && !appLoaded) {
+    appLoaded = true;
+    await enterApp(session.user);
+  } else if (!session) {
+    hide('loading'); show('auth-screen');
+  }
 }
 
 async function enterApp(user) {
