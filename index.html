@@ -705,14 +705,9 @@ function renderTabManager(){
 
 // ─── PAGES ───
 function rebuildTabPages(){
-  tabs.forEach(t=>{
-    if(!document.getElementById('page-tab-'+t.id)) buildTabPage(t);
-  });
-  // Remove pages for deleted tabs
-  document.querySelectorAll('[id^="page-tab-"]').forEach(pg=>{
-    const tabId = pg.id.replace('page-tab-','');
-    if(!tabs.find(t=>t.id===tabId)) pg.remove();
-  });
+  // Always recreate tab pages so header buttons stay up to date
+  document.querySelectorAll('[id^="page-tab-"]').forEach(pg=>pg.remove());
+  tabs.forEach(t=>buildTabPage(t));
   tabs.forEach(t=>renderTabPage(t.id));
 }
 
@@ -724,6 +719,9 @@ function buildTabPage(tab){
     <div class="page-header">
       <div class="page-title">${tab.icon} ${esc(tab.name)}<small>// aba de senhas</small></div>
       <div class="page-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditTabModal('${tab.id}')" title="Editar aba">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTab('${tab.id}')" title="Deletar aba">🗑️</button>
+        <div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div>
         <button class="btn btn-secondary btn-sm" onclick="openTabModal()">+ Nova Aba</button>
         <button class="btn btn-sm" onclick="openAddModal('${tab.id}')">+ Nova Senha</button>
       </div>
