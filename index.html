@@ -187,16 +187,43 @@
       <div class="brand-icon">🔐</div>
       <div class="brand-name">GDT</div>
     </div>
-    <div class="alert error" id="auth-error"></div>
-    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:24px;text-align:center;line-height:1.7;">
-      Entre com sua conta Google para<br/>acessar seu cofre de senhas.
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Criar Conta</button>
     </div>
-    <button class="btn btn-google" id="btn-google" onclick="doGoogleLogin()">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Entrar com Google
-    </button>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:20px;text-align:center;line-height:1.7;">
-      🔒 Seus dados são criptografados localmente.<br/>Apenas você tem acesso.
+    <div class="alert error" id="auth-error"></div>
+    <div class="alert success" id="auth-success"></div>
+
+    <div class="tab-panel active" id="panel-login">
+      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"/></div>
+      <div class="field"><label>Senha</label>
+        <div class="input-wrap"><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button class="eye-btn" onclick="toggleEye('login-pass',this)">👁</button></div>
+      </div>
+      <button class="btn" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="divider">ou</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Entrar com Google
+      </button>
+    </div>
+
+    <div class="tab-panel" id="panel-register">
+      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"/></div>
+      <div class="field"><label>Senha</label>
+        <div class="input-wrap"><input type="password" id="reg-pass" placeholder="mínimo 6 caracteres"/>
+        <button class="eye-btn" onclick="toggleEye('reg-pass',this)">👁</button></div>
+      </div>
+      <div class="field"><label>Confirmar Senha</label>
+        <div class="input-wrap"><input type="password" id="reg-pass2" placeholder="repita a senha"/>
+        <button class="eye-btn" onclick="toggleEye('reg-pass2',this)">👁</button></div>
+      </div>
+      <button class="btn" id="btn-register" onclick="doRegister()">Criar Conta</button>
+      <div class="divider">ou</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continuar com Google
+      </button>
     </div>
   </div>
 </div>
@@ -436,21 +463,11 @@ function hideLoading(){
 // ─── BOOT ───
 async function boot() {
   const { data:{ session } } = await sb.auth.getSession();
-  if (session) {
-    await enterApp(session.user);
-  } else {
-    hide('loading'); show('auth-screen');
-  }
-
+  if (session) { await enterApp(session.user); }
+  else { hide('loading'); show('auth-screen'); }
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session && !currentUser) {
-      await enterApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      creds=[]; tabs=[]; currentUser=null;
-      hide('app-screen');
-      history.replaceState(null, '', window.location.pathname);
-      show('auth-screen');
-    }
+    if (event==='SIGNED_IN' && session && !currentUser) { await enterApp(session.user); }
+    else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; currentUser=null; hide('app-screen'); show('auth-screen'); hide('loading'); }
   });
 }
 
@@ -476,21 +493,49 @@ async function loadData() {
     tabName:r.tab_name||null,
     login:r.login||'', pass:r.pass||'', notes:r.notes||'', createdAt:r.created_at
   }));
+  // Populate credStore once with all creds so reveal/copy always work
   creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
 }
 
 function slugify(s){ return s.toLowerCase().replace(/\s+/g,'-').replace(/[^\w-]/g,''); }
 
 // ─── AUTH ───
-
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',(i===0)===(tab==='login')));
+  document.getElementById('panel-login').classList.toggle('active',tab==='login');
+  document.getElementById('panel-register').classList.toggle('active',tab==='register');
+  clearAlerts();
+}
+async function doLogin() {
+  const email=v('login-email'), pass=v('login-pass');
+  if(!email||!pass){showAlert('auth-error','Preencha e-mail e senha.');return;}
+  setBtnLoad('btn-login',true,'Entrando...');
+  const {error} = await sb.auth.signInWithPassword({email,password:pass});
+  setBtnLoad('btn-login',false,'Entrar');
+  if(error) showAlert('auth-error',tErr(error.message));
+}
+async function doRegister() {
+  const email=v('reg-email'), pass=v('reg-pass'), pass2=v('reg-pass2');
+  if(!email||!pass){showAlert('auth-error','Preencha todos os campos.');return;}
+  if(pass!==pass2){showAlert('auth-error','Senhas não conferem.');return;}
+  if(pass.length<6){showAlert('auth-error','Mínimo 6 caracteres.');return;}
+  setBtnLoad('btn-register',true,'Criando...');
+  const {error} = await sb.auth.signUp({email,password:pass});
+  setBtnLoad('btn-register',false,'Criar Conta');
+  if(error){showAlert('auth-error',tErr(error.message));return;}
+  showAlert('auth-success','✅ Conta criada! Verifique seu e-mail e depois faça login.');
+}
 async function doGoogleLogin() {
   const {error} = await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
-  if(error) showAlert('auth-error', error.message);
+  if(error) showAlert('auth-error',tErr(error.message));
 }
-async function doLogout(){
-  await sb.auth.signOut({ scope: 'local' });
+async function doLogout(){ await sb.auth.signOut(); }
+function tErr(m){
+  if(m.includes('Invalid login')) return 'E-mail ou senha incorretos.';
+  if(m.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if(m.includes('already registered')) return 'E-mail já cadastrado.';
+  return m;
 }
-
 
 // ─── CREDENTIAL MODAL ───
 function openAddModal(tabId) {
@@ -545,7 +590,7 @@ async function saveCred() {
 
   const payload = {
     user_id: currentUser.id,
-    name: login,
+    name: login, // name = login
     icon,
     tab_name: tabObj ? tabObj.name : null,
     tab_icon: tabObj ? tabObj.icon : null,
@@ -863,8 +908,8 @@ function goTabPage(tabId,el){
 // ─── HELPERS ───
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function v(id){return document.getElementById(id)?.value?.trim()||'';}
-function show(id){const el=document.getElementById(id);el.style.display='flex';el.classList.add('active');}
-function hide(id){const el=document.getElementById(id);el.classList.remove('active');el.style.display='none';}
+function show(id){const el=document.getElementById(id);el.style.display='';el.classList.add('active');}
+function hide(id){const el=document.getElementById(id);el.classList.remove('active');if(el.id==='loading')el.style.display='none';}
 function toggleEye(inputId,btn){const inp=document.getElementById(inputId);inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'👁':'🙈';}
 function revealPass(id,pass){const el=document.getElementById('pv-'+id);el.textContent=el.textContent==='••••••••'?pass:'••••••••';}
 // ─── CONFIRM MODAL ───
@@ -917,7 +962,7 @@ function pickEmoji(e,containerId,isTab){if(isTab)selTabEmoji=e;else selEmoji=e;r
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
-
+function clearAlerts(){['auth-error','auth-success'].forEach(id=>{const el=document.getElementById(id);el.style.display='none';el.textContent='';});}
 function setBtnLoad(btnId,loading,label){const btn=document.getElementById(btnId);if(!btn)return;btn.disabled=loading;btn.textContent=loading?'⏳ Aguarde...':label;}
 let toastT;
 function toast(msg,type='success'){const el=document.getElementById('toast');el.textContent=(type==='success'?'✅ ':'❌ ')+msg;el.className='show '+type;clearTimeout(toastT);toastT=setTimeout(()=>el.className='',2800);}
