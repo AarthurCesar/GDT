@@ -146,6 +146,8 @@
     /* TAB MANAGER */
     .tab-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;margin-bottom:8px;}
 
+    .sb-tab-action{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;border-radius:3px;opacity:.6;transition:opacity .15s,background .15s;line-height:1;}
+    .sb-tab-action:hover{opacity:1;background:rgba(255,255,255,.1);}
     #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:11px 18px;font-family:var(--mono);font-size:13px;z-index:999;transform:translateY(70px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);}
     #toast.show{transform:translateY(0);opacity:1;}
     #toast.success{border-color:rgba(74,222,128,.4);}
@@ -673,8 +675,16 @@ function renderSidebar(){
   const el=document.getElementById('sidebar-tabs'); el.innerHTML='';
   tabs.forEach(tab=>{
     const count=creds.filter(c=>c.tabId===tab.id).length;
-    const d=document.createElement('div'); d.className='sb-item'; d.id='sb-tab-'+tab.id;
-    d.innerHTML='<span class="ic">'+tab.icon+'</span>'+esc(tab.name)+'<span class="sb-badge">'+count+'</span>';
+    const isActive = currentPageContext === tab.id;
+    const d=document.createElement('div'); d.className='sb-item'+(isActive?' active':''); d.id='sb-tab-'+tab.id;
+    d.innerHTML=`
+      <span class="ic">${tab.icon}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tab.name)}</span>
+      ${isActive ? `
+        <button class="sb-tab-action" title="Editar aba" onclick="event.stopPropagation();openEditTabModal('${tab.id}')">✏️</button>
+        <button class="sb-tab-action" title="Deletar aba" onclick="event.stopPropagation();deleteTab('${tab.id}')">🗑️</button>
+      ` : `<span class="sb-badge">${count}</span>`}
+    `;
     d.onclick=()=>goTabPage(tab.id,d); el.appendChild(d);
   });
   document.getElementById('badge-all').textContent=creds.length;
