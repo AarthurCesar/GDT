@@ -501,7 +501,9 @@ function hideLoading(){
 let _booting = false; // lock para evitar duplo enterApp
 
 async function boot() {
+  console.log('[GDT] boot start');
   sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('[GDT] authStateChange:', event, !!session);
     if (event === 'SIGNED_IN' && session && !currentUser && !_booting) {
       _booting = true;
       history.replaceState(null, '', window.location.pathname);
@@ -530,22 +532,30 @@ async function boot() {
 }
 
 async function enterApp(user) {
+  console.log('[GDT] enterApp start', user.email);
   currentUser = user;
   hide('loading'); hide('auth-screen'); show('app-screen');
   loadTheme();
   document.getElementById('topbar-email').textContent = user.email;
   document.getElementById('settings-email').textContent = user.email;
+  console.log('[GDT] calling loadData...');
   await loadData();
+  console.log('[GDT] loadData done, tabs:', tabs.length, 'creds:', creds.length);
   rebuildTabPages();
   renderSidebar(); renderAll(); renderDashboard();
+  console.log('[GDT] enterApp complete ✅');
   _booting = false;
 }
 
 // ─── DATA ───
 async function loadData() {
-  const { data: tabData } = await sb.from('tabs').select('*').order('created_at',{ascending:true});
+  console.log('[GDT] loadData: fetching tabs...');
+  const { data: tabData, error: tabErr } = await sb.from('tabs').select('*').order('created_at',{ascending:true});
+  console.log('[GDT] tabs result:', tabData, tabErr);
   tabs = (tabData||[]).map(r=>({id:r.id,name:r.name,icon:r.icon||'📁'}));
+  console.log('[GDT] loadData: fetching credentials...');
   const { data, error } = await sb.from('credentials').select('*').order('created_at',{ascending:false});
+  console.log('[GDT] creds result:', data, error);
   if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
   creds = (data||[]).map(r=>({
     id:r.id, name:r.name||r.login, icon:r.icon||null,
