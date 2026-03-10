@@ -741,6 +741,8 @@ function goPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
   document.getElementById('page-'+id)?.classList.add('active'); el?.classList.add('active');
+  // Re-render sidebar to remove edit/delete icons from tabs
+  renderSidebar();
   if(id==='all') renderAll();
   if(id==='dashboard') renderDashboard();
   if(id==='settings') renderTabManager();
@@ -749,11 +751,10 @@ function goPage(id,el){
 function goTabPage(tabId,el){
   currentPageContext = tabId;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
   const pg = document.getElementById('page-tab-'+tabId);
   if(pg) pg.classList.add('active');
-  const sbEl = el || document.getElementById('sb-tab-'+tabId);
-  if(sbEl) sbEl.classList.add('active');
+  // Re-render sidebar so edit/delete icons appear on active tab
+  renderSidebar();
   renderTabPage(tabId);
 }
 
