@@ -52,5 +52,5 @@
 ---
 
 <div align="center">
-  <sub>Desenvolvido por <strong>GDT</strong></sub>
+  <sub>Desenvolvido por <strong>Arthur Cesar</strong></sub>
 </div>
