@@ -501,8 +501,13 @@ async function saveCred() {
   if(error){toast('Erro: '+error.message,'error');return;}
 
   await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard();
-  if(currentTabContext) renderTabPage(currentTabContext);
   closeModal('modal-cred'); toast('Senha salva!','success');
+
+  // Navigate to the tab where the credential was saved
+  if(currentTabContext) {
+    const tabEl = document.getElementById('sb-tab-'+currentTabContext);
+    goTabPage(currentTabContext, tabEl);
+  }
 }
 
 async function deleteCred(id) {
@@ -647,7 +652,14 @@ function renderTabManager(){
 
 // ─── PAGES ───
 function rebuildTabPages(){
-  tabs.forEach(t=>{ if(!document.getElementById('page-tab-'+t.id)) buildTabPage(t); });
+  tabs.forEach(t=>{
+    if(!document.getElementById('page-tab-'+t.id)) buildTabPage(t);
+  });
+  // Remove pages for deleted tabs
+  document.querySelectorAll('[id^="page-tab-"]').forEach(pg=>{
+    const tabId = pg.id.replace('page-tab-','');
+    if(!tabs.find(t=>t.id===tabId)) pg.remove();
+  });
   tabs.forEach(t=>renderTabPage(t.id));
 }
 
