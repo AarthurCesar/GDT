@@ -148,6 +148,13 @@
 
     .sb-tab-action{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;border-radius:3px;opacity:.6;transition:opacity .15s,background .15s;line-height:1;}
     .sb-tab-action:hover{opacity:1;background:rgba(255,255,255,.1);}
+    #action-loading{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(10,10,15,.75);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s;}
+    #action-loading.show{opacity:1;pointer-events:all;}
+    .al-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:32px 40px;display:flex;flex-direction:column;align-items:center;gap:16px;position:relative;overflow:hidden;}
+    .al-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent);animation:shimmer 1.5s infinite;}
+    @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    .al-spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    .al-msg{font-family:var(--mono);font-size:13px;color:var(--muted);}
     #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:11px 18px;font-family:var(--mono);font-size:13px;z-index:999;transform:translateY(70px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);}
     #toast.show{transform:translateY(0);opacity:1;}
     #toast.success{border-color:rgba(74,222,128,.4);}
@@ -404,6 +411,13 @@
   </div>
 </div>
 
+<div id="action-loading">
+  <div class="al-card">
+    <div class="al-spinner"></div>
+    <div class="al-msg" id="al-msg">processando...</div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -434,6 +448,15 @@ function restorePage(){
     const tabEl = document.getElementById('sb-tab-'+currentPageContext);
     goTabPage(currentPageContext, tabEl);
   }
+}
+
+// ─── ACTION LOADING ───
+function showLoading(msg='processando...'){
+  document.getElementById('al-msg').textContent = msg;
+  document.getElementById('action-loading').classList.add('show');
+}
+function hideLoading(){
+  document.getElementById('action-loading').classList.remove('show');
 }
 
 // ─── BOOT ───
@@ -577,10 +600,12 @@ async function saveCred() {
   };
 
   setBtnLoad('btn-save-cred',true,'Salvando...');
+  showLoading(editId ? 'atualizando senha...' : 'salvando senha...');
   let error;
   if(editId){ ({error}=await sb.from('credentials').update(payload).eq('id',editId)); }
   else      { ({error}=await sb.from('credentials').insert(payload)); }
   setBtnLoad('btn-save-cred',false,'Salvar');
+  hideLoading();
   if(error){toast('Erro: '+error.message,'error');return;}
 
   const savedTabId = currentTabContext; // salva antes de qualquer render
@@ -602,9 +627,11 @@ async function deleteCred(id) {
   showConfirm('🗑️ Deletar Senha',
     'Tem certeza que deseja deletar a senha de "' + (c?.login||'') + '"? Esta ação não pode ser desfeita.',
     async () => {
+      showLoading('removendo senha...');
       const {error}=await sb.from('credentials').delete().eq('id',id);
-      if(error){toast('Erro ao deletar.','error');return;}
+      if(error){hideLoading();toast('Erro ao deletar.','error');return;}
       await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard();
+      hideLoading();
       restorePage();
       toast('Senha removida.','success');
     });
@@ -636,22 +663,23 @@ async function saveTab(){
   const editId=document.getElementById('edit-tab-id').value;
   if(!name){toast('Nome obrigatório.','error');return;}
   setBtnLoad('btn-save-tab',true,'Salvando...');
+  showLoading(editId ? 'atualizando aba...' : 'criando aba...');
   if(editId){
     const {error}=await sb.from('tabs').update({name,icon:selTabEmoji}).eq('id',editId).eq('user_id',currentUser.id);
-    if(error){toast('Erro: '+error.message,'error');setBtnLoad('btn-save-tab',false,'Salvar');return;}
+    if(error){hideLoading();toast('Erro: '+error.message,'error');setBtnLoad('btn-save-tab',false,'Salvar');return;}
     const oldTab=tabs.find(t=>t.id===editId);
     if(oldTab&&oldTab.name!==name){
       await sb.from('credentials').update({tab_name:name,tab_icon:selTabEmoji}).eq('tab_name',oldTab.name).eq('user_id',currentUser.id);
     }
     await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
-    closeModal('modal-tab'); toast('Aba atualizada!','success');
+    hideLoading(); closeModal('modal-tab'); toast('Aba atualizada!','success');
   } else {
-    if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Aba já existe.','error');setBtnLoad('btn-save-tab',false,'Criar');return;}
+    if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){hideLoading();toast('Aba já existe.','error');setBtnLoad('btn-save-tab',false,'Criar');return;}
     const newTab={id:slugify(name)+'_'+Date.now(),name,icon:selTabEmoji};
     const {error}=await sb.from('tabs').insert({id:newTab.id,user_id:currentUser.id,name:newTab.name,icon:newTab.icon});
-    if(error){toast('Erro: '+error.message,'error');setBtnLoad('btn-save-tab',false,'Criar');return;}
+    if(error){hideLoading();toast('Erro: '+error.message,'error');setBtnLoad('btn-save-tab',false,'Criar');return;}
     tabs.push(newTab); buildTabPage(newTab); renderSidebar(); renderTabManager();
-    closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
+    hideLoading(); closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
   }
   setBtnLoad('btn-save-tab',false,editId?'Salvar':'Criar');
 }
@@ -673,6 +701,7 @@ async function confirmDeleteTab(){
   const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
 
   setBtnLoad('btn-confirm-delete-tab',true,'Deletando...');
+  showLoading(opt==='tab-and-creds' ? 'deletando aba e senhas...' : 'removendo aba...');
 
   if(opt==='tab-and-creds'){
     // Delete all credentials in this tab
@@ -687,6 +716,7 @@ async function confirmDeleteTab(){
   await sb.from('tabs').delete().eq('id',tabId).eq('user_id',currentUser.id);
   setBtnLoad('btn-confirm-delete-tab',false,'Confirmar');
   closeModal('modal-delete-tab');
+  hideLoading();
 
   await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
   goPage('dashboard', document.querySelector('.sb-item[onclick*="dashboard"]'));
