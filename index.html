@@ -683,12 +683,9 @@ function renderCredList(list, containerId) {
     el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🔒</div><h3>Nenhuma senha</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';
     return;
   }
-  credStore={};
-  el.innerHTML = list.map(c=>{
-    // Store raw values in dataset to avoid HTML-encoding issues with copyVal
-    // Store values in a JS map to avoid any HTML attribute encoding issues
-    credStore[c.id] = { login: c.login, pass: c.pass };
-    return `
+  // Always sync credStore with full creds array (never clear it)
+  creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
+  el.innerHTML = list.map(c=>`
     <div class="cred-card">
       <div class="cred-card-header">
         <div class="cred-card-icon">${c.icon||'🔑'}</div>
@@ -716,8 +713,7 @@ function renderCredList(list, containerId) {
         <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCred('${c.id}')">🗑 Deletar</button>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 function renderAll(){
