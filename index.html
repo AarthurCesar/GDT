@@ -187,43 +187,48 @@
       <div class="brand-icon">🔐</div>
       <div class="brand-name">GDT</div>
     </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Criar Conta</button>
-    </div>
     <div class="alert error" id="auth-error"></div>
-    <div class="alert success" id="auth-success"></div>
-
-    <div class="tab-panel active" id="panel-login">
-      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"/></div>
-      <div class="field"><label>Senha</label>
-        <div class="input-wrap"><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-        <button class="eye-btn" onclick="toggleEye('login-pass',this)">👁</button></div>
-      </div>
-      <button class="btn" id="btn-login" onclick="doLogin()">Entrar</button>
-      <div class="divider">ou</div>
-      <button class="btn btn-google" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Entrar com Google
-      </button>
+    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:24px;text-align:center;line-height:1.7;">
+      Entre com sua conta Google para<br/>acessar seu cofre de senhas.
     </div>
+    <button class="btn btn-google" onclick="doGoogleLogin()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:20px;text-align:center;line-height:1.7;">
+      🔒 Seus dados são criptografados localmente.<br/>Apenas você tem acesso.
+    </div>
+  </div>
+</div>
 
-    <div class="tab-panel" id="panel-register">
-      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"/></div>
-      <div class="field"><label>Senha</label>
-        <div class="input-wrap"><input type="password" id="reg-pass" placeholder="mínimo 6 caracteres"/>
-        <button class="eye-btn" onclick="toggleEye('reg-pass',this)">👁</button></div>
+<!-- ═══ MODAL SENHA MESTRE ═══ -->
+<div class="modal-overlay" id="modal-master" style="z-index:300;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">🔑 Senha Mestre</div>
+    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:20px;line-height:1.7;">
+      Esta senha criptografa seus dados localmente.<br/>
+      <strong style="color:var(--red);">Não é possível recuperá-la.</strong> Guarde bem.
+    </div>
+    <div class="field">
+      <label>Senha Mestre</label>
+      <div class="input-wrap">
+        <input type="password" id="master-pass" placeholder="mínimo 6 caracteres" onkeydown="if(event.key==='Enter')submitMaster()"/>
+        <button class="eye-btn" onclick="toggleEye('master-pass',this)">👁</button>
       </div>
-      <div class="field"><label>Confirmar Senha</label>
-        <div class="input-wrap"><input type="password" id="reg-pass2" placeholder="repita a senha"/>
-        <button class="eye-btn" onclick="toggleEye('reg-pass2',this)">👁</button></div>
+    </div>
+    <div class="field" id="master-confirm-field">
+      <label>Confirmar Senha Mestre <span style="color:var(--muted);font-size:10px;">(primeira vez)</span></label>
+      <div class="input-wrap">
+        <input type="password" id="master-pass2" placeholder="repita a senha mestre" onkeydown="if(event.key==='Enter')submitMaster()"/>
+        <button class="eye-btn" onclick="toggleEye('master-pass2',this)">👁</button>
       </div>
-      <button class="btn" id="btn-register" onclick="doRegister()">Criar Conta</button>
-      <div class="divider">ou</div>
-      <button class="btn btn-google" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Continuar com Google
-      </button>
+    </div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--red);margin-bottom:16px;display:none;" id="master-error"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btn-master-ok" onclick="submitMaster()">Entrar no Cofre</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:16px;line-height:1.6;">
+      ⚠️ Se esquecer a senha mestre, seus dados não poderão ser recuperados.
     </div>
   </div>
 </div>
@@ -460,6 +465,114 @@ function hideLoading(){
   document.getElementById('action-loading').classList.remove('show');
 }
 
+// ─── CRYPTO ENGINE (AES-256-GCM) ───
+let masterKey = null; // CryptoKey, never leaves memory
+
+async function deriveMasterKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:310000, hash:'SHA-256' },
+    keyMaterial,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+}
+
+async function encryptText(text) {
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, masterKey, enc.encode(text));
+  // Return base64(iv + ciphertext)
+  const buf = new Uint8Array(iv.byteLength + cipher.byteLength);
+  buf.set(iv, 0); buf.set(new Uint8Array(cipher), iv.byteLength);
+  return btoa(String.fromCharCode(...buf));
+}
+
+async function decryptText(b64) {
+  try {
+    const buf = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+    const iv = buf.slice(0,12);
+    const cipher = buf.slice(12);
+    const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, masterKey, cipher);
+    return new TextDecoder().decode(plain);
+  } catch { return '⚠️ erro ao descriptografar'; }
+}
+
+// Salt is stored per-user in Supabase (public, not secret)
+async function getOrCreateSalt() {
+  const key = 'master_salt_'+currentUser.id;
+  const { data } = await sb.from('user_settings').select('value').eq('user_id', currentUser.id).eq('key', key).single();
+  if (data?.value) return Uint8Array.from(atob(data.value), c=>c.charCodeAt(0));
+  // First time: create salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  await sb.from('user_settings').insert({ user_id: currentUser.id, key, value: btoa(String.fromCharCode(...salt)) });
+  return salt;
+}
+
+// Check if user already has encrypted data (to know if first time or not)
+async function hasExistingData() {
+  const { data } = await sb.from('credentials').select('id').eq('user_id', currentUser.id).limit(1);
+  return data && data.length > 0;
+}
+
+// Try to decrypt a test value to validate master password
+async function validateMasterKey() {
+  const { data } = await sb.from('user_settings').select('value').eq('user_id', currentUser.id).eq('key', 'master_check').single();
+  if (!data?.value) {
+    // First time: save encrypted check value
+    const check = await encryptText('GDT_CHECK_OK');
+    await sb.from('user_settings').upsert({ user_id: currentUser.id, key: 'master_check', value: check });
+    return true;
+  }
+  const result = await decryptText(data.value);
+  return result === 'GDT_CHECK_OK';
+}
+
+let masterSalt = null;
+let isFirstMaster = false;
+
+async function openMasterModal() {
+  masterSalt = await getOrCreateSalt();
+  const existing = await hasExistingData();
+  isFirstMaster = !existing;
+  document.getElementById('master-confirm-field').style.display = isFirstMaster ? 'block' : 'none';
+  document.getElementById('master-error').style.display = 'none';
+  document.getElementById('master-pass').value = '';
+  document.getElementById('master-pass2').value = '';
+  document.getElementById('modal-master').classList.add('open');
+  setTimeout(()=>document.getElementById('master-pass').focus(), 100);
+}
+
+async function submitMaster() {
+  const pass = document.getElementById('master-pass').value;
+  const pass2 = document.getElementById('master-pass2').value;
+  const errEl = document.getElementById('master-error');
+  errEl.style.display = 'none';
+
+  if (pass.length < 6) { errEl.textContent='Mínimo 6 caracteres.'; errEl.style.display='block'; return; }
+  if (isFirstMaster && pass !== pass2) { errEl.textContent='Senhas não conferem.'; errEl.style.display='block'; return; }
+
+  setBtnLoad('btn-master-ok', true, 'Verificando...');
+  masterKey = await deriveMasterKey(pass, masterSalt);
+
+  const valid = await validateMasterKey();
+  setBtnLoad('btn-master-ok', false, 'Entrar no Cofre');
+
+  if (!valid) {
+    masterKey = null;
+    errEl.textContent = '❌ Senha mestre incorreta.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('modal-master').classList.remove('open');
+  await loadData();
+  rebuildTabPages();
+  renderSidebar(); renderAll(); renderDashboard();
+}
+
 // ─── BOOT ───
 async function boot() {
   const { data:{ session } } = await sb.auth.getSession();
@@ -476,9 +589,8 @@ async function enterApp(user) {
   hide('loading'); hide('auth-screen'); show('app-screen');
   document.getElementById('topbar-email').textContent = user.email;
   document.getElementById('settings-email').textContent = user.email;
-  await loadData();
-  rebuildTabPages();
-  renderSidebar(); renderAll(); renderDashboard();
+  // Ask for master password before loading data
+  await openMasterModal();
 }
 
 // ─── DATA ───
@@ -487,55 +599,30 @@ async function loadData() {
   tabs = (tabData||[]).map(r=>({id:r.id,name:r.name,icon:r.icon||'📁'}));
   const { data, error } = await sb.from('credentials').select('*').order('created_at',{ascending:false});
   if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
-  creds = (data||[]).map(r=>({
-    id:r.id, name:r.name||r.login, icon:r.icon||null,
+  // Decrypt all credentials
+  const decrypted = await Promise.all((data||[]).map(async r=>({
+    id:r.id, name:r.name||'', icon:r.icon||null,
     tabId: r.tab_name ? (tabs.find(t=>t.name===r.tab_name)?.id || null) : null,
     tabName:r.tab_name||null,
-    login:r.login||'', pass:r.pass||'', notes:r.notes||'', createdAt:r.created_at
-  }));
-  // Populate credStore once with all creds so reveal/copy always work
+    login: r.login ? await decryptText(r.login) : '',
+    pass:  r.pass  ? await decryptText(r.pass)  : '',
+    notes: r.notes ? await decryptText(r.notes) : '',
+    createdAt:r.created_at
+  })));
+  creds = decrypted;
   creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
 }
 
 function slugify(s){ return s.toLowerCase().replace(/\s+/g,'-').replace(/[^\w-]/g,''); }
 
 // ─── AUTH ───
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',(i===0)===(tab==='login')));
-  document.getElementById('panel-login').classList.toggle('active',tab==='login');
-  document.getElementById('panel-register').classList.toggle('active',tab==='register');
-  clearAlerts();
-}
-async function doLogin() {
-  const email=v('login-email'), pass=v('login-pass');
-  if(!email||!pass){showAlert('auth-error','Preencha e-mail e senha.');return;}
-  setBtnLoad('btn-login',true,'Entrando...');
-  const {error} = await sb.auth.signInWithPassword({email,password:pass});
-  setBtnLoad('btn-login',false,'Entrar');
-  if(error) showAlert('auth-error',tErr(error.message));
-}
-async function doRegister() {
-  const email=v('reg-email'), pass=v('reg-pass'), pass2=v('reg-pass2');
-  if(!email||!pass){showAlert('auth-error','Preencha todos os campos.');return;}
-  if(pass!==pass2){showAlert('auth-error','Senhas não conferem.');return;}
-  if(pass.length<6){showAlert('auth-error','Mínimo 6 caracteres.');return;}
-  setBtnLoad('btn-register',true,'Criando...');
-  const {error} = await sb.auth.signUp({email,password:pass});
-  setBtnLoad('btn-register',false,'Criar Conta');
-  if(error){showAlert('auth-error',tErr(error.message));return;}
-  showAlert('auth-success','✅ Conta criada! Verifique seu e-mail e depois faça login.');
-}
+
 async function doGoogleLogin() {
   const {error} = await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
   if(error) showAlert('auth-error',tErr(error.message));
 }
 async function doLogout(){ await sb.auth.signOut(); }
-function tErr(m){
-  if(m.includes('Invalid login')) return 'E-mail ou senha incorretos.';
-  if(m.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
-  if(m.includes('already registered')) return 'E-mail já cadastrado.';
-  return m;
-}
+
 
 // ─── CREDENTIAL MODAL ───
 function openAddModal(tabId) {
@@ -588,15 +675,21 @@ async function saveCred() {
   const icon = selEmoji || (tabObj ? tabObj.icon : '🔑');
   const editId = document.getElementById('edit-cred-id').value;
 
+  // Encrypt sensitive fields before saving
+  const encLogin = await encryptText(login);
+  const encPass  = await encryptText(pass);
+  const rawNotes = document.getElementById('cred-notes').value.trim();
+  const encNotes = rawNotes ? await encryptText(rawNotes) : '';
+
   const payload = {
     user_id: currentUser.id,
-    name: login, // name = login
+    name: login, // name stays plain for display reference
     icon,
     tab_name: tabObj ? tabObj.name : null,
     tab_icon: tabObj ? tabObj.icon : null,
-    login,
-    pass,
-    notes: document.getElementById('cred-notes').value.trim(),
+    login: encLogin,
+    pass: encPass,
+    notes: encNotes,
     url: null,
   };
 
@@ -962,7 +1055,7 @@ function pickEmoji(e,containerId,isTab){if(isTab)selTabEmoji=e;else selEmoji=e;r
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
-function clearAlerts(){['auth-error','auth-success'].forEach(id=>{const el=document.getElementById(id);el.style.display='none';el.textContent='';});}
+
 function setBtnLoad(btnId,loading,label){const btn=document.getElementById(btnId);if(!btn)return;btn.disabled=loading;btn.textContent=loading?'⏳ Aguarde...':label;}
 let toastT;
 function toast(msg,type='success'){const el=document.getElementById('toast');el.textContent=(type==='success'?'✅ ':'❌ ')+msg;el.className='show '+type;clearTimeout(toastT);toastT=setTimeout(()=>el.className='',2800);}
