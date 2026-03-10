@@ -348,6 +348,35 @@
   </div>
 </div>
 
+<!-- MODAL DELETAR ABA -->
+<div class="modal-overlay" id="modal-delete-tab">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title" style="color:var(--red);">🗑️ Deletar Aba</div>
+    <div class="modal-subtitle" id="modal-delete-tab-sub">// o que deseja fazer?</div>
+    <input type="hidden" id="delete-tab-id"/>
+    <div style="display:flex;flex-direction:column;gap:10px;margin:18px 0;">
+      <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:border-color .2s;" id="opt-tab-only-wrap">
+        <input type="radio" name="delete-opt" value="tab-only" checked style="margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;"/>
+        <div>
+          <div style="font-size:14px;font-weight:600;">Deletar só a aba</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;">As senhas ficam em "Todas", sem aba.</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:border-color .2s;" id="opt-tab-all-wrap">
+        <input type="radio" name="delete-opt" value="tab-and-creds" style="margin-top:2px;accent-color:var(--red);width:16px;height:16px;flex-shrink:0;"/>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--red);">Deletar aba e todas as senhas</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;">Remove permanentemente a aba e tudo dentro dela.</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="btn-confirm-delete-tab" onclick="confirmDeleteTab()">Confirmar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete-tab')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -595,16 +624,41 @@ async function saveTab(){
   setBtnLoad('btn-save-tab',false,editId?'Salvar':'Criar');
 }
 
-async function deleteTab(tabId){
-  if(!confirm('Deletar aba? Senhas dentro dela ficarão sem aba.')) return;
+function deleteTab(tabId){
   const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
-  const ids=creds.filter(c=>c.tabId===tabId).map(c=>c.id);
-  if(ids.length) await sb.from('credentials').update({tab_name:null,tab_icon:null}).in('id',ids);
+  const count=creds.filter(c=>c.tabId===tabId).length;
+  document.getElementById('delete-tab-id').value=tabId;
+  document.getElementById('modal-delete-tab-sub').textContent=
+    '// aba: '+tab.icon+' '+tab.name+(count?' · '+count+' senha(s)':'');
+  // Reset to default option
+  document.querySelector('input[name="delete-opt"][value="tab-only"]').checked=true;
+  document.getElementById('modal-delete-tab').classList.add('open');
+}
+
+async function confirmDeleteTab(){
+  const tabId=document.getElementById('delete-tab-id').value;
+  const opt=document.querySelector('input[name="delete-opt"]:checked').value;
+  const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
+
+  setBtnLoad('btn-confirm-delete-tab',true,'Deletando...');
+
+  if(opt==='tab-and-creds'){
+    // Delete all credentials in this tab
+    const ids=creds.filter(c=>c.tabId===tabId).map(c=>c.id);
+    if(ids.length) await sb.from('credentials').delete().in('id',ids);
+  } else {
+    // Just orphan the credentials (remove tab reference)
+    const ids=creds.filter(c=>c.tabId===tabId).map(c=>c.id);
+    if(ids.length) await sb.from('credentials').update({tab_name:null,tab_icon:null}).in('id',ids);
+  }
+
   await sb.from('tabs').delete().eq('id',tabId).eq('user_id',currentUser.id);
-  document.getElementById('page-tab-'+tabId)?.remove();
-  await loadData(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
-  goPage('dashboard',document.querySelector('.sb-item'));
-  toast('Aba removida.','success');
+  setBtnLoad('btn-confirm-delete-tab',false,'Confirmar');
+  closeModal('modal-delete-tab');
+
+  await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
+  goPage('dashboard', document.querySelector('.sb-item[onclick*="dashboard"]'));
+  toast(opt==='tab-and-creds'?'Aba e senhas removidas.':'Aba removida, senhas mantidas.','success');
 }
 
 // ─── RENDER ───
