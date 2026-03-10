@@ -465,8 +465,8 @@ async function boot() {
   if (session) { await enterApp(session.user); }
   else { hide('loading'); show('auth-screen'); }
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event==='SIGNED_IN' && session) { await enterApp(session.user); }
-    else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; hide('app-screen'); show('auth-screen'); hide('loading'); }
+    if (event==='SIGNED_IN' && session && !currentUser) { await enterApp(session.user); }
+    else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; currentUser=null; hide('app-screen'); show('auth-screen'); hide('loading'); }
   });
 }
 
