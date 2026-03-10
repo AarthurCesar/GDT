@@ -57,6 +57,12 @@
     .topbar-right{display:flex;align-items:center;gap:12px;}
     .user-pill{font-family:var(--mono);font-size:12px;color:var(--muted);padding:5px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;}
     .user-pill strong{color:var(--accent2);}
+    .user-pill .pill-label{display:inline;}
+    .user-pill .pill-short{display:none;}
+    @media(max-width:680px){
+      .user-pill .pill-label{display:none;}
+      .user-pill .pill-short{display:inline;}
+    }
     .logout-btn{padding:6px 13px;background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;}
     .logout-btn:hover{border-color:var(--red);color:var(--red);}
     .layout{display:flex;flex:1;height:calc(100vh - 58px);}
@@ -235,7 +241,10 @@
       <div class="topbar-brand">🔐 GDT</div>
     </div>
     <div class="topbar-right">
-      <div class="user-pill">logado como <strong id="topbar-email"></strong></div>
+      <div class="user-pill">
+        <span class="pill-label">logado como <strong id="topbar-email"></strong></span>
+        <strong class="pill-short" id="topbar-email-short"></strong>
+      </div>
       <button class="logout-btn" onclick="doLogout()">Sair</button>
     </div>
   </div>
@@ -473,7 +482,9 @@ async function boot() {
 async function enterApp(user) {
   currentUser = user;
   hide('loading'); hide('auth-screen'); show('app-screen');
-  document.getElementById('topbar-email').textContent = user.email;
+  const emailEl = document.getElementById('topbar-email');
+  emailEl.textContent = user.email;
+  document.getElementById('topbar-email-short').textContent = user.email.substring(0, 3).toUpperCase();
   document.getElementById('settings-email').textContent = user.email;
   await loadData();
   rebuildTabPages();
