@@ -249,7 +249,7 @@
   <div class="modal">
     <div class="modal-title" id="modal-cred-title">Nova Credencial</div>
     <input type="hidden" id="edit-cred-id"/>
-    <div class="field"><label>Nome / Serviço</label><input type="text" id="cred-name" placeholder="ex: Netflix, Steam, Gmail..."/></div>
+    <div class="field"><label>Nome / Serviço</label><input type="text" id="cred-name" placeholder="ex: Netflix, Steam, Gmail..." oninput="autoFillLogin(this.value)"/></div>
     <div class="field"><label>Ícone</label><div class="emoji-grid" id="emoji-picker"></div></div>
     <div class="field"><label>Aba</label><select id="cred-tab"></select></div>
     <div class="field"><label>Site / URL</label><input type="text" id="cred-url" placeholder="https://..."/></div>
@@ -271,7 +271,8 @@
 <!-- MODAL ABA -->
 <div class="modal-overlay" id="modal-tab">
   <div class="modal" style="max-width:360px;">
-    <div class="modal-title">Nova Aba</div>
+    <div class="modal-title" id="modal-tab-title">Nova Aba</div>
+    <input type="hidden" id="edit-tab-id"/>
     <div class="field"><label>Nome</label><input type="text" id="tab-name" placeholder="ex: Jogos, Trabalho, Social..."/></div>
     <div class="field"><label>Ícone</label><div class="emoji-grid" id="tab-emoji-picker"></div></div>
     <div class="modal-actions">
@@ -369,11 +370,26 @@ function openAddModal(defaultTabId) {
   selEmoji='🌐'; renderEmojiPicker('emoji-picker',false);
   document.getElementById('modal-cred-title').textContent='Nova Credencial';
   document.getElementById('edit-cred-id').value='';
-  ['cred-name','cred-url','cred-login','cred-pass','cred-notes'].forEach(id=>document.getElementById(id).value='');
+  ['cred-name','cred-url','cred-login','cred-pass','cred-notes'].forEach(id=>document.getElementById(id).value=''); document.getElementById('cred-login').dataset.userEdited='';
   document.getElementById('sf').style.width='0%'; document.getElementById('sl').textContent='';
   populateTabSelect(defaultTabId);
   document.getElementById('modal-cred').classList.add('open');
 }
+
+function autoFillLogin(name){
+  const loginField=document.getElementById('cred-login');
+  // Only auto-fill if user hasn't typed anything yet
+  if(!loginField.dataset.userEdited){
+    loginField.placeholder=name ? 'ex: usuario@'+name.toLowerCase().replace(/\s+/g,'')+'.com' : 'usuario@email.com';
+  }
+}
+
+// Track if user manually edited the login field
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('cred-login')?.addEventListener('input',function(){
+    this.dataset.userEdited='1';
+  });
+});
 
 function openEditModal(id) {
   const c=creds.find(x=>x.id===id); if(!c) return;
@@ -423,18 +439,47 @@ async function deleteCred(id) {
 function openTabModal(){
   selTabEmoji='📁'; renderEmojiPicker('tab-emoji-picker',true);
   document.getElementById('tab-name').value='';
+  document.getElementById('edit-tab-id').value='';
+  document.getElementById('modal-tab-title').textContent='Nova Aba';
+  document.getElementById('btn-save-tab').textContent='Criar';
+  document.getElementById('modal-tab').classList.add('open');
+}
+
+function openEditTabModal(tabId){
+  const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
+  selTabEmoji=tab.icon; renderEmojiPicker('tab-emoji-picker',true);
+  document.getElementById('tab-name').value=tab.name;
+  document.getElementById('edit-tab-id').value=tabId;
+  document.getElementById('modal-tab-title').textContent='Editar Aba';
+  document.getElementById('btn-save-tab').textContent='Salvar';
   document.getElementById('modal-tab').classList.add('open');
 }
 
 async function saveTab(){
   const name=document.getElementById('tab-name').value.trim();
+  const editId=document.getElementById('edit-tab-id').value;
   if(!name){toast('Nome obrigatório.','error');return;}
-  if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Aba já existe.','error');return;}
-  const newTab={id:slugify(name),name,icon:selTabEmoji};
-  const {error}=await sb.from('tabs').insert({id:newTab.id,user_id:currentUser.id,name:newTab.name,icon:newTab.icon});
-  if(error){toast('Erro ao criar aba: '+error.message,'error');return;}
-  tabs.push(newTab); buildTabPage(newTab); renderSidebar(); renderTabManager();
-  closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
+
+  if(editId){
+    // EDIT existing tab
+    const {error}=await sb.from('tabs').update({name,icon:selTabEmoji}).eq('id',editId).eq('user_id',currentUser.id);
+    if(error){toast('Erro ao editar aba: '+error.message,'error');return;}
+    // Update credentials that use this tab name
+    const oldTab=tabs.find(t=>t.id===editId);
+    if(oldTab && oldTab.name!==name){
+      await sb.from('credentials').update({tab_name:name,tab_icon:selTabEmoji}).eq('tab_name',oldTab.name).eq('user_id',currentUser.id);
+    }
+    await loadData(); renderSidebar(); renderAll(); renderDashboard(); rebuildTabPages(); renderTabManager();
+    closeModal('modal-tab'); toast('Aba atualizada!','success');
+  } else {
+    // CREATE new tab
+    if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Aba já existe.','error');return;}
+    const newTab={id:slugify(name),name,icon:selTabEmoji};
+    const {error}=await sb.from('tabs').insert({id:newTab.id,user_id:currentUser.id,name:newTab.name,icon:newTab.icon});
+    if(error){toast('Erro ao criar aba: '+error.message,'error');return;}
+    tabs.push(newTab); buildTabPage(newTab); renderSidebar(); renderTabManager();
+    closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
+  }
 }
 
 async function deleteTab(tabId){
@@ -512,7 +557,14 @@ function renderDashboard(){
 function renderTabManager(){
   const el=document.getElementById('tab-manager'); if(!el) return;
   if(!tabs.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);font-family:var(--mono);">Nenhuma aba criada.</p>';return;}
-  el.innerHTML=tabs.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;margin-bottom:8px;"><span style="font-size:20px;">${t.icon}</span><span style="flex:1;font-size:14px;">${esc(t.name)}</span><button class="btn btn-danger btn-sm" onclick="deleteTab('${t.id}')">🗑 Deletar</button></div>`).join('');
+  el.innerHTML=tabs.map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;margin-bottom:8px;">
+      <span style="font-size:20px;">${t.icon}</span>
+      <span style="flex:1;font-size:14px;font-weight:600;">${esc(t.name)}</span>
+      <span style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-right:4px;">${creds.filter(c=>c.tabId===t.id).length} senha(s)</span>
+      <button class="btn btn-secondary btn-sm" onclick="openEditTabModal('${t.id}')">✏️ Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteTab('${t.id}')">🗑</button>
+    </div>`).join('');
 }
 
 function goPage(id,el){
