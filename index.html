@@ -462,7 +462,15 @@
 const SUPA_URL = 'https://qmminrxwqfowwqytlhja.supabase.co';
 const SUPA_KEY = 'sb_publishable_UAnDzENb07iWlDe_0ysQQA_Vue4i0gm';
 const { createClient } = supabase;
-const sb = createClient(SUPA_URL, SUPA_KEY);
+const sb = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'gdt-vault-session',
+  }
+});
 
 const EMOJIS = ['🌐','🎮','📧','💼','🏦','🎵','🛒','📱','🎬','🔧','🏠','🚗','✈️','💪','📚','🎨','🎯','💡','🔑','👤','🎲','🛡','💻','📷','🤝','🏆','🍕','⚽','🎸','🌙','☀️','🦊','🐉','💎','🔥','⚡'];
 
@@ -502,13 +510,15 @@ let _booting = false; // lock para evitar duplo enterApp
 
 async function boot() {
   console.log('[GDT] boot start');
+
+  // Registra listener ANTES de tudo
   sb.auth.onAuthStateChange(async (event, session) => {
     console.log('[GDT] authStateChange:', event, !!session);
-    if (event === 'SIGNED_IN' && session && !currentUser && !_booting) {
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && !currentUser && !_booting) {
       _booting = true;
       history.replaceState(null, '', window.location.pathname);
       await enterApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
+    } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
       _booting = false;
       creds=[]; tabs=[]; currentUser=null;
       hide('app-screen');
@@ -516,16 +526,24 @@ async function boot() {
     }
   });
 
-  // Delay para o Supabase processar o hash OAuth
-  await new Promise(r => setTimeout(r, 400));
+  // Aguarda o onAuthStateChange processar INITIAL_SESSION
+  await new Promise(r => setTimeout(r, 800));
 
+  // Se ainda não logou, tenta getSession como fallback
   if (!currentUser && !_booting) {
-    const { data:{ session } } = await sb.auth.getSession();
-    if (session) {
-      _booting = true;
-      history.replaceState(null, '', window.location.pathname);
-      await enterApp(session.user);
-    } else {
+    console.log('[GDT] fallback: getSession');
+    try {
+      const { data:{ session }, error } = await sb.auth.getSession();
+      console.log('[GDT] getSession result:', !!session, error?.message);
+      if (session) {
+        _booting = true;
+        history.replaceState(null, '', window.location.pathname);
+        await enterApp(session.user);
+      } else {
+        hide('loading'); show('auth-screen');
+      }
+    } catch(e) {
+      console.error('[GDT] getSession error:', e);
       hide('loading'); show('auth-screen');
     }
   }
@@ -548,15 +566,36 @@ async function enterApp(user) {
 }
 
 // ─── DATA ───
+async function fetchWithTimeout(promise, ms=8000){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+}
+
 async function loadData() {
   console.log('[GDT] loadData: fetching tabs...');
-  const { data: tabData, error: tabErr } = await sb.from('tabs').select('*').order('created_at',{ascending:true});
+  let tabData = [], tabErr = null;
+  try {
+    const res = await fetchWithTimeout(sb.from('tabs').select('*').order('created_at',{ascending:true}));
+    tabData = res.data || [];
+    tabErr = res.error;
+  } catch(e) {
+    console.warn('[GDT] tabs fetch failed/timeout:', e.message);
+    tabData = [];
+  }
   console.log('[GDT] tabs result:', tabData, tabErr);
-  tabs = (tabData||[]).map(r=>({id:r.id,name:r.name,icon:r.icon||'📁'}));
+  tabs = tabData.map(r=>({id:r.id,name:r.name,icon:r.icon||'📁'}));
+
   console.log('[GDT] loadData: fetching credentials...');
-  const { data, error } = await sb.from('credentials').select('*').order('created_at',{ascending:false});
+  let data = [], error = null;
+  try {
+    const res = await fetchWithTimeout(sb.from('credentials').select('*').order('created_at',{ascending:false}));
+    data = res.data || [];
+    error = res.error;
+  } catch(e) {
+    console.warn('[GDT] creds fetch failed/timeout:', e.message);
+    data = [];
+  }
   console.log('[GDT] creds result:', data, error);
-  if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
+  if (error) { showToast('Erro ao carregar: '+error.message); return; }
   creds = (data||[]).map(r=>({
     id:r.id, name:r.name||r.login, icon:r.icon||null,
     tabId: r.tab_name ? (tabs.find(t=>t.name===r.tab_name)?.id || null) : null,
