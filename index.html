@@ -498,40 +498,47 @@ function hideLoading(){
 }
 
 // ─── BOOT ───
+let _booting = false; // lock para evitar duplo enterApp
+
 async function boot() {
-  // Deixa o Supabase processar o hash do OAuth antes de tudo
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session && !currentUser) {
+    if (event === 'SIGNED_IN' && session && !currentUser && !_booting) {
+      _booting = true;
       history.replaceState(null, '', window.location.pathname);
       await enterApp(session.user);
     } else if (event === 'SIGNED_OUT') {
+      _booting = false;
       creds=[]; tabs=[]; currentUser=null;
       hide('app-screen');
       show('auth-screen');
     }
   });
 
-  // Pequeno delay para o Supabase processar o hash
-  await new Promise(r => setTimeout(r, 300));
+  // Delay para o Supabase processar o hash OAuth
+  await new Promise(r => setTimeout(r, 400));
 
-  const { data:{ session } } = await sb.auth.getSession();
-  if (session && !currentUser) {
-    history.replaceState(null, '', window.location.pathname);
-    await enterApp(session.user);
-  } else if (!currentUser) {
-    hide('loading'); show('auth-screen');
+  if (!currentUser && !_booting) {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (session) {
+      _booting = true;
+      history.replaceState(null, '', window.location.pathname);
+      await enterApp(session.user);
+    } else {
+      hide('loading'); show('auth-screen');
+    }
   }
 }
 
 async function enterApp(user) {
   currentUser = user;
   hide('loading'); hide('auth-screen'); show('app-screen');
-  loadTheme(); // async, don't await — never blocks render
+  loadTheme();
   document.getElementById('topbar-email').textContent = user.email;
   document.getElementById('settings-email').textContent = user.email;
   await loadData();
   rebuildTabPages();
   renderSidebar(); renderAll(); renderDashboard();
+  _booting = false;
 }
 
 // ─── DATA ───
