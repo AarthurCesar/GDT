@@ -477,7 +477,13 @@ async function doGoogleLogin() {
   const {error} = await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
   if(error) showAlert('auth-error', error.message);
 }
-async function doLogout(){ await sb.auth.signOut(); }
+async function doLogout(){
+  await sb.auth.signOut({ scope: 'global' });
+  creds=[]; tabs=[]; currentUser=null;
+  hide('app-screen'); show('auth-screen');
+  // Force reload to clear any cached state
+  setTimeout(()=>window.location.reload(), 200);
+}
 
 
 // ─── CREDENTIAL MODAL ───
