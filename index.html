@@ -435,13 +435,20 @@ function hideLoading(){
 
 // ─── BOOT ───
 async function boot() {
-  const { data:{ session } } = await sb.auth.getSession();
-  if (session) { await enterApp(session.user); }
-  else { hide('loading'); show('auth-screen'); }
+  // Fix double hash from OAuth redirect (##access_token)
+  if (window.location.hash.includes('access_token')) {
+    const fixed = window.location.hash.replace(/^#+/, '#');
+    history.replaceState(null, '', window.location.pathname + fixed);
+  }
+
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event==='SIGNED_IN' && session && !currentUser) { await enterApp(session.user); }
     else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; currentUser=null; hide('app-screen'); show('auth-screen'); hide('loading'); }
   });
+
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) { await enterApp(session.user); }
+  else { hide('loading'); show('auth-screen'); }
 }
 
 async function enterApp(user) {
@@ -478,11 +485,7 @@ async function doGoogleLogin() {
   if(error) showAlert('auth-error', error.message);
 }
 async function doLogout(){
-  await sb.auth.signOut({ scope: 'global' });
-  creds=[]; tabs=[]; currentUser=null;
-  hide('app-screen'); show('auth-screen');
-  // Force reload to clear any cached state
-  setTimeout(()=>window.location.reload(), 200);
+  await sb.auth.signOut({ scope: 'local' });
 }
 
 
