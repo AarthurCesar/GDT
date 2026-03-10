@@ -91,21 +91,24 @@
     .search-wrap input{padding-left:38px;}
     .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;}
 
-    /* CREDENTIAL LIST - simplified row layout */
-    .creds-list{display:flex;flex-direction:column;gap:8px;}
-    .cred-row{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .2s,transform .1s;position:relative;overflow:hidden;}
-    .cred-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--accent),var(--accent2));opacity:0;transition:opacity .2s;}
-    .cred-row:hover{border-color:rgba(124,92,252,.4);transform:translateX(2px);}
-    .cred-row:hover::before{opacity:1;}
-    .cred-row-icon{font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;flex-shrink:0;}
-    .cred-row-main{flex:1;min-width:0;}
-    .cred-row-login{font-family:var(--mono);font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .cred-row-note{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .cred-row-pass{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:6px 10px;font-family:var(--mono);font-size:13px;min-width:140px;}
-    .cred-row-pass span{flex:1;}
+    /* CREDENTIAL GRID - card layout */
+    .creds-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+    .cred-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;transition:border-color .2s,transform .15s;position:relative;overflow:hidden;}
+    .cred-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .2s;}
+    .cred-card:hover{border-color:rgba(124,92,252,.4);transform:translateY(-2px);}
+    .cred-card:hover::before{opacity:1;}
+    .cred-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+    .cred-card-icon{font-size:22px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;flex-shrink:0;}
+    .cred-card-title{flex:1;min-width:0;}
+    .cred-card-login-label{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+    .cred-card-note{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cred-field-block{margin-bottom:10px;}
+    .cred-field-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:4px;}
+    .cred-field-row{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:8px 10px;font-family:var(--mono);font-size:13px;}
+    .cred-field-row span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .copy-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color .15s;padding:0;flex-shrink:0;}
     .copy-btn:hover{color:var(--accent2);}
-    .cred-row-actions{display:flex;gap:6px;flex-shrink:0;}
+    .cred-card-actions{display:flex;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
 
     /* EMPTY */
     .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;color:var(--muted);text-align:center;gap:10px;}
@@ -585,25 +588,36 @@ async function deleteTab(tabId){
 function renderCredList(list, containerId) {
   const el=document.getElementById(containerId); if(!el) return;
   if(!list.length){
-    el.innerHTML='<div class="empty"><div class="ei">🔒</div><h3>Nenhuma senha</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';
+    el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🔒</div><h3>Nenhuma senha</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';
     return;
   }
   el.innerHTML = list.map(c=>`
-    <div class="cred-row">
-      <div class="cred-row-icon">${c.icon||'🔑'}</div>
-      <div class="cred-row-main">
-        <div class="cred-row-login">${esc(c.login)}</div>
-        ${c.notes?`<div class="cred-row-note">${esc(c.notes)}</div>`:''}
+    <div class="cred-card">
+      <div class="cred-card-header">
+        <div class="cred-card-icon">${c.icon||'🔑'}</div>
+        <div class="cred-card-title">
+          <div class="cred-card-login-label">${esc(c.login)}</div>
+          ${c.notes?`<div class="cred-card-note">${esc(c.notes)}</div>`:''}
+        </div>
       </div>
-      <div class="cred-row-pass">
-        <span id="pv-${c.id}">••••••••</span>
-        <button class="copy-btn" onclick="copyVal(${JSON.stringify(c.pass)},this)" title="Copiar senha">📋</button>
-        <button class="copy-btn" onclick="revealPass('${c.id}',${JSON.stringify(c.pass)})" title="Ver senha">👁</button>
+      <div class="cred-field-block">
+        <div class="cred-field-label">Login</div>
+        <div class="cred-field-row">
+          <span>${esc(c.login)}</span>
+          <button class="copy-btn" onclick="copyVal(${JSON.stringify(c.login)},this)" title="Copiar login">📋</button>
+        </div>
       </div>
-      <button class="copy-btn" style="font-size:16px;padding:0 4px;" onclick="copyVal(${JSON.stringify(c.login)},this)" title="Copiar login">📋</button>
-      <div class="cred-row-actions">
-        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCred('${c.id}')">🗑</button>
+      <div class="cred-field-block">
+        <div class="cred-field-label">Senha</div>
+        <div class="cred-field-row">
+          <span id="pv-${c.id}">••••••••</span>
+          <button class="copy-btn" onclick="copyVal(${JSON.stringify(c.pass)},this)" title="Copiar senha">📋</button>
+          <button class="copy-btn" onclick="revealPass('${c.id}',${JSON.stringify(c.pass)})" title="Ver senha">👁</button>
+        </div>
+      </div>
+      <div class="cred-card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCred('${c.id}')">🗑 Deletar</button>
       </div>
     </div>`).join('');
 }
