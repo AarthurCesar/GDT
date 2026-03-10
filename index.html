@@ -1054,26 +1054,13 @@ function applyTheme(theme){
 function setTheme(theme){
   localStorage.setItem('gdt-theme', theme);
   applyTheme(theme);
-  // Save to Supabase if logged in
-  if(currentUser){
-    sb.from('user_settings').upsert({user_id:currentUser.id, key:'theme', value:theme},{onConflict:'user_id,key'}).then(()=>{});
-  }
   showToast(theme==='light'?'☀️ Tema branco ativado':theme==='dark'?'🌑 Tema preto ativado':'💻 Usando tema do sistema');
 }
 
-async function loadTheme(){
-  try {
-    // First try localStorage (instant, no flash)
-    const local = localStorage.getItem('gdt-theme');
-    if(local){ applyTheme(local); return; }
-    // Then Supabase if logged in
-    if(currentUser){
-      const {data} = await sb.from('user_settings').select('value').eq('user_id',currentUser.id).eq('key','theme').maybeSingle();
-      if(data){ localStorage.setItem('gdt-theme',data.value); applyTheme(data.value); return; }
-    }
-  } catch(e){ /* ignore */ }
-  // Default: system
-  applyTheme('system');
+function loadTheme(){
+  // Só localStorage — sem Supabase para não bloquear nada
+  const t = localStorage.getItem('gdt-theme') || 'system';
+  applyTheme(t);
 }
 
 function exportData(){const blob=new Blob([JSON.stringify(creds,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gdt-vault-backup.json';a.click();}
