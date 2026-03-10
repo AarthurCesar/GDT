@@ -435,13 +435,10 @@ function hideLoading(){
 
 // ─── BOOT ───
 async function boot() {
-  // Limpa URL se vier com hash do OAuth
-  if (window.location.hash) {
-    history.replaceState(null, '', window.location.pathname);
-  }
-
+  // Deixa o Supabase processar o hash do OAuth antes de tudo
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session && !currentUser) {
+      history.replaceState(null, '', window.location.pathname);
       await enterApp(session.user);
     } else if (event === 'SIGNED_OUT') {
       creds=[]; tabs=[]; currentUser=null;
@@ -450,16 +447,14 @@ async function boot() {
     }
   });
 
-  const { data:{ session }, error } = await sb.auth.getSession();
-  if (error) {
-    // Sessão corrompida — limpa tudo e mostra login
-    await sb.auth.signOut();
-    hide('loading'); show('auth-screen');
-    return;
-  }
-  if (session) {
+  // Pequeno delay para o Supabase processar o hash
+  await new Promise(r => setTimeout(r, 300));
+
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session && !currentUser) {
+    history.replaceState(null, '', window.location.pathname);
     await enterApp(session.user);
-  } else {
+  } else if (!currentUser) {
     hide('loading'); show('auth-screen');
   }
 }
