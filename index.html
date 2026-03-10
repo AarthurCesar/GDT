@@ -454,6 +454,8 @@ async function loadData() {
     tabName:r.tab_name||null,
     login:r.login||'', pass:r.pass||'', notes:r.notes||'', createdAt:r.created_at
   }));
+  // Populate credStore once with all creds so reveal/copy always work
+  creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
 }
 
 function slugify(s){ return s.toLowerCase().replace(/\s+/g,'-').replace(/[^\w-]/g,''); }
@@ -683,8 +685,6 @@ function renderCredList(list, containerId) {
     el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🔒</div><h3>Nenhuma senha</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';
     return;
   }
-  // Always sync credStore with full creds array (never clear it)
-  creds.forEach(c=>{ credStore[c.id]={login:c.login, pass:c.pass}; });
   el.innerHTML = list.map(c=>`
     <div class="cred-card">
       <div class="cred-card-header">
