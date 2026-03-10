@@ -400,6 +400,7 @@ const sb = createClient(SUPA_URL, SUPA_KEY);
 const EMOJIS = ['🌐','🎮','📧','💼','🏦','🎵','🛒','📱','🎬','🔧','🏠','🚗','✈️','💪','📚','🎨','🎯','💡','🔑','👤','🎲','🛡','💻','📷','🤝','🏆','🍕','⚽','🎸','🌙','☀️','🦊','🐉','💎','🔥','⚡'];
 
 let creds=[], tabs=[], currentUser=null;
+let credStore={}; // maps cred id -> {login, pass} for safe access
 let selEmoji=null, selTabEmoji='📁';
 let currentTabContext=null; // which tab we're adding to
 let currentPageContext=null; // 'all', 'dashboard', or tabId — tracks where user is
@@ -682,10 +683,11 @@ function renderCredList(list, containerId) {
     el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🔒</div><h3>Nenhuma senha</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';
     return;
   }
+  credStore={};
   el.innerHTML = list.map(c=>{
     // Store raw values in dataset to avoid HTML-encoding issues with copyVal
-    const loginB64 = btoa(unescape(encodeURIComponent(c.login)));
-    const passB64  = btoa(unescape(encodeURIComponent(c.pass)));
+    // Store values in a JS map to avoid any HTML attribute encoding issues
+    credStore[c.id] = { login: c.login, pass: c.pass };
     return `
     <div class="cred-card">
       <div class="cred-card-header">
@@ -699,15 +701,15 @@ function renderCredList(list, containerId) {
         <div class="cred-field-label">Login</div>
         <div class="cred-field-row">
           <span>${esc(c.login)}</span>
-          <button class="copy-btn" onclick="copyB64('${loginB64}',this)" title="Copiar login">📋</button>
+          <button class="copy-btn" onclick="copyFromStore('${c.id}','login',this)" title="Copiar login">📋</button>
         </div>
       </div>
       <div class="cred-field-block">
         <div class="cred-field-label">Senha</div>
         <div class="cred-field-row">
-          <span id="pv-${c.id}" data-pass="${passB64}">••••••••</span>
-          <button class="copy-btn" onclick="copyB64('${passB64}',this)" title="Copiar senha">📋</button>
-          <button class="copy-btn" onclick="revealPassB64('${c.id}')" title="Ver senha">👁</button>
+          <span id="pv-${c.id}">••••••••</span>
+          <button class="copy-btn" onclick="copyFromStore('${c.id}','pass',this)" title="Copiar senha">📋</button>
+          <button class="copy-btn" onclick="revealFromStore('${c.id}')" title="Ver senha">👁</button>
         </div>
       </div>
       <div class="cred-card-actions">
@@ -848,17 +850,17 @@ async function copyVal(text,btn){
   try{await navigator.clipboard.writeText(text);const o=btn.textContent;btn.textContent='✅';setTimeout(()=>btn.textContent=o,1400);}
   catch{toast('Não foi possível copiar.','error');}
 }
-async function copyB64(b64,btn){
+async function copyFromStore(id, field, btn){
   try{
-    const text = decodeURIComponent(escape(atob(b64)));
+    const text = credStore[id]?.[field] || '';
     await navigator.clipboard.writeText(text);
     const o=btn.textContent; btn.textContent='✅'; setTimeout(()=>btn.textContent=o,1400);
   } catch{ toast('Não foi possível copiar.','error'); }
 }
-function revealPassB64(id){
+function revealFromStore(id){
   const el=document.getElementById('pv-'+id); if(!el) return;
   if(el.textContent==='••••••••'){
-    el.textContent = decodeURIComponent(escape(atob(el.dataset.pass)));
+    el.textContent = credStore[id]?.pass || '';
   } else {
     el.textContent = '••••••••';
   }
