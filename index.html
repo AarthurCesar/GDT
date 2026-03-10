@@ -571,26 +571,23 @@ async function openMasterModal() {
     return;
   }
 
-  // Check if user already has a code stored (returning user on new device)
+  // Always fetch or generate code and SHOW it on screen first
   const { data } = await sb.from('user_settings').select('value')
     .eq('user_id', currentUser.id).eq('key', 'otp_code').maybeSingle();
 
-  const hasCode = data?.value && data.value !== '';
+  let code = data?.value && data.value !== '' ? data.value : null;
 
-  if (hasCode) {
-    // Returning user on new device: ask for their saved code
-    showStep(3);
-  } else {
-    // First time ever: generate and show code
-    pendingOtp = generateOtp();
+  if (!code) {
+    // Generate new code
+    code = generateOtp();
     await sb.from('user_settings').upsert({
-      user_id: currentUser.id, key: 'otp_code',
-      value: pendingOtp
+      user_id: currentUser.id, key: 'otp_code', value: code
     });
-    document.getElementById('otp-display').textContent = pendingOtp;
-    showStep(1);
   }
 
+  // Always show the code on screen (step 1)
+  document.getElementById('otp-display').textContent = code;
+  showStep(1);
   document.getElementById('modal-master').classList.add('open');
 }
 
