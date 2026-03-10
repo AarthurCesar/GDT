@@ -1,57 +1,43 @@
-# 🔐 VaultKey — Gerenciador de Senhas
+<div align="center">
 
-Um gerenciador de senhas pessoal, bonito e funcional. Roda 100% no navegador — sem backend, sem servidor.
+# 🔐 GDT Vault Keys
 
-## ✨ Funcionalidades
+**Gerenciador de senhas pessoal — elegante, seguro e sem backend próprio.**
 
-- **Login com senha mestra** — acesse só com seu usuário + senha
-- **Abas personalizadas** — crie abas como "Jogos", "Trabalho", "Redes Sociais"
-- **Salvar credenciais** — nome, login/email, senha, URL e notas
-- **Copiar com 1 clique** — copia login ou senha sem precisar ver
-- **Indicador de força** — avalia a força de cada senha
-- **Busca** — encontre qualquer credencial rapidamente
-- **Exportar backup** — baixe um JSON com seus dados
-- **100% offline** — dados ficam no localStorage do seu navegador
+[![Deploy](https://img.shields.io/badge/deploy-vercel-black?style=flat-square&logo=vercel)](https://vercel.com)
+[![Supabase](https://img.shields.io/badge/auth-supabase-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
+[![HTML](https://img.shields.io/badge/built%20with-HTML%20%2B%20JS-orange?style=flat-square)]()
+
+</div>
 
 ---
 
-## 🚀 Como hospedar no Vercel (gratuito)
+## 📸 Sobre o projeto
 
-### Opção 1: Deploy via GitHub (recomendado)
+**GDT Vault Keys** é um cofre digital para organizar suas credenciais com estilo. Desenvolvido em HTML/CSS/JS puro, sem frameworks — com autenticação real via Supabase e uma interface dark minimalista que parece premium.
 
-1. Crie uma conta gratuita em [vercel.com](https://vercel.com)
-2. Crie um repositório no GitHub e suba os arquivos:
-   ```
-   index.html
-   vercel.json
-   ```
-3. No Vercel: **Add New Project** → importe o repositório do GitHub
-4. Clique em **Deploy** — pronto! Você receberá uma URL do tipo `https://seusite.vercel.app`
-
-### Opção 2: Deploy via Vercel CLI
-
-```bash
-npm install -g vercel
-cd pasta-do-projeto
-vercel
-```
-
-### Outras opções gratuitas
-
-| Plataforma | Como fazer |
-|---|---|
-| **Netlify** | Arraste a pasta para [app.netlify.com/drop](https://app.netlify.com/drop) |
-| **GitHub Pages** | Suba para um repo público e ative Pages nas configurações |
-| **Cloudflare Pages** | Conecte o GitHub no [pages.cloudflare.com](https://pages.cloudflare.com) |
+> Feito como projeto pessoal para aprender e praticar integração com BaaS (Backend as a Service).
 
 ---
 
-## ⚠️ Importante sobre segurança
+## ⚡ Funcionalidades
 
-- As senhas ficam no **localStorage** do seu navegador
-- **Não compartilhe o link** com outras pessoas (elas não verão seus dados, mas você perde privacidade)
-- Use o botão **Exportar** regularmente para fazer backup
-- Para mais segurança, use em modo privado ou em um navegador dedicado
+- **Login com e-mail ou Google OAuth** — autenticação via Supabase Auth
+- **Dashboard** com estatísticas e credenciais recentes
+- **Abas personalizadas** — organize por categoria com ícones emoji
+- **Indicador de força de senha** em tempo real
+- **Copiar login/senha** com 1 clique, sem revelar
+- **Busca instantânea** por credencial
+- **Exportar backup** em JSON
+
+---
+
+## 🛠 Tecnologias
+
+- **Frontend:** HTML, CSS e JavaScript vanilla
+- **Auth + DB:** [Supabase](https://supabase.com)
+- **Fontes:** Syne + Space Mono (Google Fonts)
+- **Deploy:** Vercel
 
 ---
 
@@ -59,6 +45,12 @@ vercel
 
 ```
 /
-├── index.html     # App completo (HTML + CSS + JS)
-└── vercel.json    # Configuração do Vercel
+├── index.html     # Aplicação completa
+└── vercel.json    # Config de deploy
 ```
+
+---
+
+<div align="center">
+  <sub>Desenvolvido por <strong>GDT</strong></sub>
+</div>
