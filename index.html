@@ -500,13 +500,15 @@ async function saveCred() {
   setBtnLoad('btn-save-cred',false,'Salvar');
   if(error){toast('Erro: '+error.message,'error');return;}
 
+  const savedTabId = currentTabContext; // salva antes de qualquer render
   await loadData(); rebuildTabPages(); renderSidebar(); renderAll(); renderDashboard();
   closeModal('modal-cred'); toast('Senha salva!','success');
 
-  // Navigate to the tab where the credential was saved
-  if(currentTabContext) {
-    const tabEl = document.getElementById('sb-tab-'+currentTabContext);
-    goTabPage(currentTabContext, tabEl);
+  // Navega para a aba correta após todos os renders
+  if(savedTabId) {
+    // sidebar foi recriado, busca o elemento atualizado
+    const tabEl = document.getElementById('sb-tab-'+savedTabId);
+    goTabPage(savedTabId, tabEl);
   }
 }
 
@@ -693,9 +695,15 @@ function goPage(id,el){
 }
 
 function goTabPage(tabId,el){
+  // Deactivate all pages and sidebar items
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
-  document.getElementById('page-tab-'+tabId)?.classList.add('active'); el?.classList.add('active');
+  // Activate the tab page
+  const pg = document.getElementById('page-tab-'+tabId);
+  if(pg) pg.classList.add('active');
+  // Activate sidebar item (re-fetch in case sidebar was re-rendered)
+  const sbEl = el || document.getElementById('sb-tab-'+tabId);
+  if(sbEl) sbEl.classList.add('active');
   renderTabPage(tabId);
 }
 
