@@ -385,7 +385,8 @@ async function loadData() {
   if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
   creds = (data||[]).map(r=>({
     id:r.id, name:r.name||r.login, icon:r.icon||null,
-    tabId:r.tab_name?slugify(r.tab_name):null, tabName:r.tab_name||null,
+    tabId: r.tab_name ? (tabs.find(t=>t.name===r.tab_name)?.id || null) : null,
+    tabName:r.tab_name||null,
     login:r.login||'', pass:r.pass||'', notes:r.notes||'', createdAt:r.created_at
   }));
 }
