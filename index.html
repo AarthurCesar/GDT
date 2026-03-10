@@ -868,8 +868,8 @@ function goTabPage(tabId,el){
 // ─── HELPERS ───
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function v(id){return document.getElementById(id)?.value?.trim()||'';}
-function show(id){const el=document.getElementById(id);el.style.display='';el.classList.add('active');}
-function hide(id){const el=document.getElementById(id);el.classList.remove('active');if(el.id==='loading')el.style.display='none';}
+function show(id){const el=document.getElementById(id);el.style.display='flex';el.classList.add('active');}
+function hide(id){const el=document.getElementById(id);el.classList.remove('active');el.style.display='none';}
 function toggleEye(inputId,btn){const inp=document.getElementById(inputId);inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'👁':'🙈';}
 function revealPass(id,pass){const el=document.getElementById('pv-'+id);el.textContent=el.textContent==='••••••••'?pass:'••••••••';}
 // ─── CONFIRM MODAL ───
