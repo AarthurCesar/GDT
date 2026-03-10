@@ -1,924 +1,242 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VaultKey — Gerenciador de Senhas</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VaultKey</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --surface2: #18181f;
-      --border: #2a2a38;
-      --accent: #7c5cfc;
-      --accent2: #c084fc;
-      --green: #4ade80;
-      --red: #f87171;
-      --yellow: #fbbf24;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --mono: 'Space Mono', monospace;
-      --sans: 'Syne', sans-serif;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ─── NOISE OVERLAY ─── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.5;
-    }
-
-    /* ─── LOGIN SCREEN ─── */
-    #login-screen {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      position: relative;
-      z-index: 1;
-    }
-
-    #login-screen::before {
-      content: '';
-      position: fixed;
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(124,92,252,0.15) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    .login-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 48px;
-      width: 420px;
-      max-width: 95vw;
-      position: relative;
-      animation: fadeUp 0.5s ease forwards;
-    }
-
-    .login-box::before {
-      content: '';
-      position: absolute;
-      top: -1px; left: 24px; right: 24px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 36px;
-    }
-
-    .brand-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    }
-
-    .brand-name {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .brand-name span { color: var(--accent2); }
-
-    h2.login-title {
-      font-size: 15px;
-      font-weight: 400;
-      color: var(--muted);
-      margin-bottom: 28px;
-      font-family: var(--mono);
-    }
-
-    .field {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-      font-family: var(--mono);
-    }
-
-    input[type="text"],
-    input[type="password"],
-    input[type="email"],
-    input[type="url"],
-    select, textarea {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 12px 14px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-    }
-
-    .input-wrap {
-      position: relative;
-    }
-
-    .input-wrap input { padding-right: 44px; }
-
-    .toggle-vis {
-      position: absolute;
-      right: 12px; top: 50%;
-      transform: translateY(-50%);
-      background: none; border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 16px;
-      transition: color 0.2s;
-    }
-    .toggle-vis:hover { color: var(--text); }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border: none;
-      border-radius: 2px;
-      color: #fff;
-      font-family: var(--sans);
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: opacity 0.2s, transform 0.1s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn:hover { opacity: 0.9; }
-    .btn:active { transform: scale(0.99); }
-
-    .btn-secondary {
-      background: var(--surface2);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-sm {
-      width: auto;
-      padding: 8px 16px;
-      font-size: 12px;
-    }
-
-    .btn-danger {
-      background: rgba(248,113,113,0.15);
-      color: var(--red);
-      border: 1px solid rgba(248,113,113,0.3);
-    }
-
-    .error-msg {
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.3);
-      border-radius: 2px;
-      padding: 10px 14px;
-      font-size: 13px;
-      color: var(--red);
-      margin-bottom: 20px;
-      font-family: var(--mono);
-      display: none;
-    }
-
-    .setup-hint {
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--muted);
-      font-family: var(--mono);
-      text-align: center;
-    }
-
-    /* ─── APP SHELL ─── */
-    #app {
-      display: none;
-      min-height: 100vh;
-      position: relative;
-      z-index: 1;
-    }
-
-    .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .topbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      font-size: 18px;
-      letter-spacing: -0.3px;
-    }
-
-    .topbar-brand span { color: var(--accent2); }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .user-badge {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted);
-      padding: 6px 12px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-    }
-
-    .user-badge strong { color: var(--accent2); }
-
-    .logout-btn {
-      padding: 7px 14px;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .logout-btn:hover { border-color: var(--red); color: var(--red); }
-
-    /* ─── MAIN LAYOUT ─── */
-    .main-layout {
-      display: flex;
-      height: calc(100vh - 60px);
-    }
-
-    .sidebar {
-      width: 240px;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      padding: 24px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      overflow-y: auto;
-      flex-shrink: 0;
-    }
-
-    .sidebar-section {
-      padding: 0 16px;
-      margin-bottom: 8px;
-    }
-
-    .sidebar-label {
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
-      padding: 0 12px;
-      margin-bottom: 4px;
-    }
-
-    .sidebar-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 2px;
-      cursor: pointer;
-      font-size: 14px;
-      color: var(--muted);
-      transition: all 0.15s;
-      border: 1px solid transparent;
-      user-select: none;
-    }
-
-    .sidebar-item:hover { background: var(--surface2); color: var(--text); }
-    .sidebar-item.active {
-      background: rgba(124,92,252,0.15);
-      color: var(--accent2);
-      border-color: rgba(124,92,252,0.3);
-    }
-
-    .sidebar-item .item-icon { font-size: 15px; width: 20px; text-align: center; }
-
-    .badge {
-      margin-left: auto;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      font-size: 10px;
-      font-family: var(--mono);
-      padding: 2px 7px;
-      border-radius: 10px;
-      color: var(--muted);
-    }
-
-    .add-tab-btn {
-      margin: 8px 16px;
-      padding: 9px 12px;
-      background: transparent;
-      border: 1px dashed var(--border);
-      border-radius: 2px;
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 12px;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.2s;
-      width: calc(100% - 32px);
-    }
-    .add-tab-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* ─── CONTENT ─── */
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 32px;
-    }
-
-    .page { display: none; }
-    .page.active { display: block; }
-
-    .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-    }
-
-    .page-title {
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .page-title small {
-      display: block;
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--muted);
-      font-family: var(--mono);
-      margin-top: 2px;
-      letter-spacing: 0.5px;
-    }
-
-    /* ─── SEARCH BAR ─── */
-    .search-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .search-wrap {
-      flex: 1;
-      position: relative;
-    }
-
-    .search-wrap input {
-      padding-left: 40px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 12px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 16px;
-    }
-
-    /* ─── CREDENTIAL CARDS ─── */
-    .creds-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
-    }
-
-    .cred-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 20px;
-      transition: border-color 0.2s, transform 0.15s;
-      cursor: default;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cred-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .cred-card:hover { border-color: rgba(124,92,252,0.4); transform: translateY(-1px); }
-    .cred-card:hover::before { opacity: 1; }
-
-    .cred-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-
-    .cred-favicon {
-      width: 38px; height: 38px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .cred-info { flex: 1; min-width: 0; }
-
-    .cred-name {
-      font-size: 15px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 3px;
-    }
-
-    .cred-url {
-      font-size: 11px;
-      color: var(--muted);
-      font-family: var(--mono);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .cred-field {
-      margin-bottom: 10px;
-    }
-
-    .cred-field-label {
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
-      margin-bottom: 4px;
-    }
-
-    .cred-field-val {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 7px 10px;
-      font-family: var(--mono);
-      font-size: 13px;
-    }
-
-    .cred-field-val span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    .copy-btn {
-      background: none; border: none;
-      color: var(--muted); cursor: pointer;
-      font-size: 14px; transition: color 0.15s;
-      padding: 0; flex-shrink: 0;
-    }
-    .copy-btn:hover { color: var(--accent2); }
-    .copy-btn.copied { color: var(--green); }
-
-    .cred-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid var(--border);
-    }
-
-    /* ─── EMPTY STATE ─── */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 20px;
-      color: var(--muted);
-      text-align: center;
-      gap: 12px;
-    }
-
-    .empty-state .empty-icon { font-size: 48px; opacity: 0.4; }
-    .empty-state h3 { font-size: 18px; color: var(--text); }
-    .empty-state p { font-size: 13px; font-family: var(--mono); max-width: 300px; line-height: 1.6; }
-
-    /* ─── MODAL ─── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-overlay.open { display: flex; }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 32px;
-      width: 480px;
-      max-width: 95vw;
-      max-height: 90vh;
-      overflow-y: auto;
-      position: relative;
-      animation: fadeUp 0.25s ease;
-    }
-
-    .modal::before {
-      content: '';
-      position: absolute;
-      top: -1px; left: 24px; right: 24px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 800;
-      margin-bottom: 24px;
-      letter-spacing: -0.3px;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
-    /* ─── TABS EDIT ─── */
-    .tab-edit-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 14px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      margin-bottom: 8px;
-    }
-
-    .tab-icon-pick {
-      font-size: 20px;
-      width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .tab-icon-pick:hover { border-color: var(--accent); }
-
-    /* ─── TOAST ─── */
-    #toast {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 12px 20px;
-      font-family: var(--mono);
-      font-size: 13px;
-      z-index: 999;
-      transform: translateY(80px);
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    #toast.success { border-color: rgba(74,222,128,0.4); }
-    #toast.error { border-color: rgba(248,113,113,0.4); }
-
-    /* ─── DASHBOARD STATS ─── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 20px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--mono);
-      margin-bottom: 8px;
-    }
-
-    .stat-val {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* ─── PASSWORD STRENGTH ─── */
-    .strength-bar {
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      margin-top: 8px;
-      overflow: hidden;
-    }
-
-    .strength-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.3s, background 0.3s;
-    }
-
-    .strength-label {
-      font-size: 11px;
-      font-family: var(--mono);
-      margin-top: 4px;
-    }
-
-    /* EMOJI PICKER */
-    .emoji-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 12px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      margin-bottom: 12px;
-    }
-
-    .emoji-opt {
-      font-size: 20px;
-      width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: background 0.15s;
-    }
-    .emoji-opt:hover { background: var(--surface); }
-    .emoji-opt.selected { background: rgba(124,92,252,0.3); }
-
-    select option { background: var(--surface2); }
-
-    @media (max-width: 700px) {
-      .sidebar { display: none; }
-      .content { padding: 16px; }
-    }
+    :root{--bg:#0a0a0f;--surface:#111118;--surface2:#18181f;--border:#2a2a38;--accent:#7c5cfc;--accent2:#c084fc;--green:#4ade80;--red:#f87171;--text:#e2e8f0;--muted:#64748b;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+    .screen{display:none;position:relative;z-index:1;}.screen.active{display:flex;}
+    #auth-screen{min-height:100vh;align-items:center;justify-content:center;}
+    #auth-screen::before{content:'';position:fixed;width:700px;height:700px;background:radial-gradient(circle,rgba(124,92,252,.13) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+    .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:48px;width:440px;max-width:96vw;animation:fadeUp .4s ease forwards;position:relative;}
+    .auth-card::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent);}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+    .brand-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+    .brand-name{font-size:24px;font-weight:800;letter-spacing:-.5px;}
+    .brand-name span{color:var(--accent2);}
+    .auth-tabs{display:flex;margin-bottom:28px;border:1px solid var(--border);border-radius:2px;overflow:hidden;}
+    .auth-tab{flex:1;padding:11px;text-align:center;font-size:13px;font-family:var(--mono);color:var(--muted);cursor:pointer;background:transparent;border:none;transition:all .2s;}
+    .auth-tab.active{background:rgba(124,92,252,.2);color:var(--accent2);}
+    .tab-panel{display:none;}.tab-panel.active{display:block;}
+    .field{margin-bottom:18px;}
+    label{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-family:var(--mono);}
+    input[type=text],input[type=password],input[type=email],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:12px 14px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;transition:border-color .2s;}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+    .input-wrap{position:relative;}.input-wrap input{padding-right:44px;}
+    .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;transition:color .2s;}
+    .eye-btn:hover{color:var(--text);}
+    .btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:2px;color:#fff;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn:hover{opacity:.9;}.btn:active{transform:scale(.99);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+    .btn-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3);}
+    .btn-sm{width:auto;padding:8px 16px;font-size:12px;}
+    .btn-google{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;font-weight:600;}
+    .btn-google:hover{border-color:var(--accent);}
+    .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12px;font-family:var(--mono);}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .alert{padding:11px 14px;border-radius:2px;font-family:var(--mono);font-size:13px;margin-bottom:18px;display:none;}
+    .alert.error{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);}
+    .alert.success{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--green);}
+    #loading{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+    #loading .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    #loading p{font-family:var(--mono);font-size:13px;color:var(--muted);}
+    #app-screen{flex-direction:column;min-height:100vh;}
+    .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .topbar-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.3px;}
+    .topbar-brand span{color:var(--accent2);}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    .user-pill{font-family:var(--mono);font-size:12px;color:var(--muted);padding:5px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;}
+    .user-pill strong{color:var(--accent2);}
+    .logout-btn{padding:6px 13px;background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;}
+    .logout-btn:hover{border-color:var(--red);color:var(--red);}
+    .layout{display:flex;flex:1;height:calc(100vh - 58px);}
+    .sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+    .sb-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);padding:0 14px;margin:16px 0 6px;}
+    .sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:14px;color:var(--muted);transition:all .15s;border:1px solid transparent;margin:0 8px;border-radius:2px;user-select:none;}
+    .sb-item:hover{background:var(--surface2);color:var(--text);}
+    .sb-item.active{background:rgba(124,92,252,.15);color:var(--accent2);border-color:rgba(124,92,252,.3);}
+    .sb-item .ic{font-size:15px;width:20px;text-align:center;}
+    .sb-badge{margin-left:auto;background:var(--surface2);border:1px solid var(--border);font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:10px;color:var(--muted);}
+    .add-tab-btn{margin:6px 16px;padding:9px 12px;background:transparent;border:1px dashed var(--border);border-radius:2px;color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;text-align:left;transition:all .2s;width:calc(100% - 32px);}
+    .add-tab-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .content{flex:1;overflow-y:auto;padding:28px;}
+    .page{display:none;}.page.active{display:block;}
+    .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;}
+    .page-title{font-size:22px;font-weight:800;letter-spacing:-.4px;}
+    .page-title small{display:block;font-size:11px;font-weight:400;color:var(--muted);font-family:var(--mono);margin-top:2px;letter-spacing:.5px;}
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:18px;}
+    .stat-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:8px;}
+    .stat-val{font-size:30px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .search-row{display:flex;gap:10px;margin-bottom:20px;}
+    .search-wrap{flex:1;position:relative;}
+    .search-wrap input{padding-left:38px;}
+    .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;}
+    .creds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;}
+    .cred-card{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:18px;transition:border-color .2s,transform .15s;position:relative;overflow:hidden;}
+    .cred-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity .2s;}
+    .cred-card:hover{border-color:rgba(124,92,252,.4);transform:translateY(-1px);}
+    .cred-card:hover::before{opacity:1;}
+    .cred-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
+    .cred-icon{width:36px;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+    .cred-info{flex:1;min-width:0;}
+    .cred-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+    .cred-url{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cred-field{margin-bottom:8px;}
+    .cred-field-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:3px;}
+    .cred-field-val{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:6px 10px;font-family:var(--mono);font-size:13px;}
+    .cred-field-val span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .copy-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color .15s;padding:0;flex-shrink:0;}
+    .copy-btn:hover{color:var(--accent2);}
+    .cred-actions{display:flex;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;color:var(--muted);text-align:center;gap:10px;grid-column:1/-1;}
+    .empty .ei{font-size:44px;opacity:.35;}
+    .empty h3{font-size:17px;color:var(--text);}
+    .empty p{font-size:12px;font-family:var(--mono);max-width:280px;line-height:1.7;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:30px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;position:relative;animation:fadeUp .22s ease;}
+    .modal::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent);}
+    .modal-title{font-size:18px;font-weight:800;margin-bottom:22px;letter-spacing:-.3px;}
+    .modal-actions{display:flex;gap:10px;margin-top:22px;}
+    .emoji-grid{display:flex;flex-wrap:wrap;gap:5px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;margin-bottom:10px;}
+    .emoji-opt{font-size:19px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .15s;}
+    .emoji-opt:hover{background:var(--surface);}
+    .emoji-opt.selected{background:rgba(124,92,252,.35);}
+    .strength-bar{height:3px;background:var(--border);border-radius:2px;margin-top:7px;overflow:hidden;}
+    .strength-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+    .strength-label{font-size:11px;font-family:var(--mono);margin-top:4px;}
+    #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:11px 18px;font-family:var(--mono);font-size:13px;z-index:999;transform:translateY(70px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);}
+    #toast.show{transform:translateY(0);opacity:1;}
+    #toast.success{border-color:rgba(74,222,128,.4);}
+    #toast.error{border-color:rgba(248,113,113,.4);}
+    select option{background:var(--surface2);}
+    textarea{resize:vertical;}
+    @media(max-width:680px){.sidebar{display:none;}.content{padding:16px;}.auth-card{padding:28px 20px;}}
   </style>
 </head>
 <body>
 
-<!-- ═══════════ LOGIN SCREEN ═══════════ -->
-<div id="login-screen">
-  <div class="login-box">
+<div id="loading"><div class="spinner"></div><p>carregando cofre...</p></div>
+
+<!-- AUTH -->
+<div class="screen" id="auth-screen">
+  <div class="auth-card">
     <div class="brand">
       <div class="brand-icon">🔐</div>
       <div class="brand-name">Vault<span>Key</span></div>
     </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Criar Conta</button>
+    </div>
+    <div class="alert error" id="auth-error"></div>
+    <div class="alert success" id="auth-success"></div>
 
-    <h2 class="login-title">// acesse seu cofre</h2>
-
-    <div class="error-msg" id="login-error">Usuário ou senha incorretos.</div>
-
-    <div id="setup-form" style="display:none">
-      <p style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:20px;">
-        Primeiro acesso! Crie seu login mestre:
-      </p>
-      <div class="field">
-        <label>Usuário</label>
-        <input type="text" id="setup-user" placeholder="ex: arthur" />
+    <!-- LOGIN -->
+    <div class="tab-panel active" id="panel-login">
+      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"/></div>
+      <div class="field"><label>Senha</label>
+        <div class="input-wrap"><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button class="eye-btn" onclick="toggleEye('login-pass',this)">👁</button></div>
       </div>
-      <div class="field">
-        <label>Senha Mestra</label>
-        <div class="input-wrap">
-          <input type="password" id="setup-pass" placeholder="mínimo 8 caracteres" />
-          <button class="toggle-vis" onclick="toggleVis('setup-pass',this)">👁</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>Confirmar Senha</label>
-        <div class="input-wrap">
-          <input type="password" id="setup-confirm" placeholder="repita a senha" />
-          <button class="toggle-vis" onclick="toggleVis('setup-confirm',this)">👁</button>
-        </div>
-      </div>
-      <button class="btn" onclick="setupAccount()">Criar Conta</button>
-      <p class="setup-hint">Suas senhas ficam salvas localmente no seu navegador.</p>
+      <button class="btn" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="divider">ou</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Entrar com Google
+      </button>
     </div>
 
-    <div id="login-form">
-      <div class="field">
-        <label>Usuário</label>
-        <input type="text" id="login-user" placeholder="seu usuário" autocomplete="off" />
+    <!-- REGISTER -->
+    <div class="tab-panel" id="panel-register">
+      <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"/></div>
+      <div class="field"><label>Senha</label>
+        <div class="input-wrap"><input type="password" id="reg-pass" placeholder="mínimo 6 caracteres"/>
+        <button class="eye-btn" onclick="toggleEye('reg-pass',this)">👁</button></div>
       </div>
-      <div class="field">
-        <label>Senha Mestra</label>
-        <div class="input-wrap">
-          <input type="password" id="login-pass" placeholder="sua senha mestra"
-            onkeydown="if(event.key==='Enter')doLogin()" />
-          <button class="toggle-vis" onclick="toggleVis('login-pass',this)">👁</button>
-        </div>
+      <div class="field"><label>Confirmar Senha</label>
+        <div class="input-wrap"><input type="password" id="reg-pass2" placeholder="repita a senha"/>
+        <button class="eye-btn" onclick="toggleEye('reg-pass2',this)">👁</button></div>
       </div>
-      <button class="btn" onclick="doLogin()">Entrar no Cofre</button>
+      <button class="btn" id="btn-register" onclick="doRegister()">Criar Conta</button>
+      <div class="divider">ou</div>
+      <button class="btn btn-google" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continuar com Google
+      </button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════ APP SHELL ═══════════ -->
-<div id="app">
+<!-- APP -->
+<div class="screen" id="app-screen">
   <div class="topbar">
     <div class="topbar-brand">🔐 Vault<span>Key</span></div>
     <div class="topbar-right">
-      <div class="user-badge">logado como <strong id="topbar-user"></strong></div>
+      <div class="user-pill">logado como <strong id="topbar-email"></strong></div>
       <button class="logout-btn" onclick="doLogout()">Sair</button>
     </div>
   </div>
-
-  <div class="main-layout">
-    <!-- SIDEBAR -->
+  <div class="layout">
     <div class="sidebar">
-      <div class="sidebar-label">Menu</div>
-      <div class="sidebar-item active" onclick="goPage('dashboard',this)">
-        <span class="item-icon">📊</span> Dashboard
-      </div>
-      <div class="sidebar-item" onclick="goPage('all',this)">
-        <span class="item-icon">🗂</span> Todas as Senhas
-        <span class="badge" id="badge-all">0</span>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div class="sidebar-label">Abas</div>
-        <div id="sidebar-tabs"></div>
-        <button class="add-tab-btn" onclick="openTabModal()">+ Nova Aba</button>
-      </div>
-
-      <div style="margin-top:auto; padding: 0 16px 8px;">
-        <div class="sidebar-item" onclick="goPage('settings',this)">
-          <span class="item-icon">⚙️</span> Configurações
-        </div>
+      <div class="sb-label">Menu</div>
+      <div class="sb-item active" onclick="goPage('dashboard',this)"><span class="ic">📊</span> Dashboard</div>
+      <div class="sb-item" onclick="goPage('all',this)"><span class="ic">🗂</span> Todas <span class="sb-badge" id="badge-all">0</span></div>
+      <div class="sb-label" style="margin-top:12px;">Abas</div>
+      <div id="sidebar-tabs"></div>
+      <button class="add-tab-btn" onclick="openTabModal()">+ Nova Aba</button>
+      <div style="margin-top:auto;">
+        <div class="sb-item" onclick="goPage('settings',this)"><span class="ic">⚙️</span> Configurações</div>
       </div>
     </div>
-
-    <!-- CONTENT -->
     <div class="content">
 
-      <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="page-header">
-          <div class="page-title">
-            Dashboard
-            <small>// visão geral do seu cofre</small>
-          </div>
+          <div class="page-title">Dashboard <small>// visão geral</small></div>
           <button class="btn btn-sm" onclick="openAddModal()">+ Nova Senha</button>
         </div>
         <div class="stats-row" id="stats-row"></div>
-        <h3 style="font-size:14px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">ADICIONADOS RECENTEMENTE</h3>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:14px;">RECENTES</div>
         <div class="creds-grid" id="recent-grid"></div>
       </div>
 
-      <!-- ALL PASSWORDS -->
       <div class="page" id="page-all">
         <div class="page-header">
-          <div class="page-title">
-            Todas as Senhas
-            <small>// todas as suas credenciais</small>
-          </div>
+          <div class="page-title">Todas as Senhas <small>// suas credenciais</small></div>
           <button class="btn btn-sm" onclick="openAddModal()">+ Nova Senha</button>
         </div>
-        <div class="search-row">
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="search-all" placeholder="buscar por nome, login, site..."
-              oninput="renderAll()" />
-          </div>
-        </div>
+        <div class="search-row"><div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-all" placeholder="buscar..." oninput="renderAll()"/>
+        </div></div>
         <div class="creds-grid" id="all-grid"></div>
       </div>
 
-      <!-- TAB PAGES (dynamic) -->
       <div id="tab-pages"></div>
 
-      <!-- SETTINGS -->
       <div class="page" id="page-settings">
-        <div class="page-header">
-          <div class="page-title">
-            Configurações
-            <small>// conta & preferências</small>
+        <div class="page-header"><div class="page-title">Configurações <small>// conta & abas</small></div></div>
+        <div style="max-width:460px;">
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:14px;">CONTA</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:16px;margin-bottom:24px;">
+            <div style="font-size:13px;font-family:var(--mono);color:var(--muted);">logado como</div>
+            <div style="font-size:15px;font-weight:600;margin-top:4px;" id="settings-email"></div>
           </div>
-        </div>
-
-        <div style="max-width:480px;">
-          <h3 style="font-size:13px;letter-spacing:1.5px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">ALTERAR SENHA MESTRA</h3>
-          <div class="field">
-            <label>Senha Atual</label>
-            <div class="input-wrap">
-              <input type="password" id="cur-pass" />
-              <button class="toggle-vis" onclick="toggleVis('cur-pass',this)">👁</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Nova Senha</label>
-            <div class="input-wrap">
-              <input type="password" id="new-pass" />
-              <button class="toggle-vis" onclick="toggleVis('new-pass',this)">👁</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Confirmar Nova</label>
-            <div class="input-wrap">
-              <input type="password" id="new-pass2" />
-              <button class="toggle-vis" onclick="toggleVis('new-pass2',this)">👁</button>
-            </div>
-          </div>
-          <button class="btn" style="max-width:240px;" onclick="changePassword()">Salvar Nova Senha</button>
-
-          <h3 style="font-size:13px;letter-spacing:1.5px;color:var(--muted);font-family:var(--mono);margin-top:36px;margin-bottom:16px;">GERENCIAR ABAS</h3>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:14px;">GERENCIAR ABAS</div>
           <div id="tab-manager"></div>
-
-          <h3 style="font-size:13px;letter-spacing:1.5px;color:var(--red);font-family:var(--mono);margin-top:36px;margin-bottom:16px;">ZONA DE PERIGO</h3>
-          <button class="btn btn-danger btn-sm" onclick="exportData()">📤 Exportar Dados (JSON)</button>
-          &nbsp;
-          <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="clearAllData()">🗑 Apagar Tudo</button>
+          <div style="font-size:12px;color:var(--red);font-family:var(--mono);margin:24px 0 14px;">EXPORTAR</div>
+          <button class="btn btn-danger btn-sm" onclick="exportData()">📤 Exportar JSON</button>
         </div>
       </div>
 
@@ -926,585 +244,327 @@
   </div>
 </div>
 
-<!-- ═══════════ MODALS ═══════════ -->
-
-<!-- Add/Edit Credential -->
+<!-- MODAL CREDENCIAL -->
 <div class="modal-overlay" id="modal-cred">
   <div class="modal">
     <div class="modal-title" id="modal-cred-title">Nova Credencial</div>
-    <input type="hidden" id="edit-cred-id" />
-    <div class="field">
-      <label>Nome / Serviço</label>
-      <input type="text" id="cred-name" placeholder="ex: Netflix, Steam, Gmail..." />
+    <input type="hidden" id="edit-cred-id"/>
+    <div class="field"><label>Nome / Serviço</label><input type="text" id="cred-name" placeholder="ex: Netflix, Steam, Gmail..."/></div>
+    <div class="field"><label>Ícone</label><div class="emoji-grid" id="emoji-picker"></div></div>
+    <div class="field"><label>Aba</label><select id="cred-tab"></select></div>
+    <div class="field"><label>Site / URL</label><input type="text" id="cred-url" placeholder="https://..."/></div>
+    <div class="field"><label>Login / E-mail</label><input type="text" id="cred-login" placeholder="usuario@email.com" autocomplete="off"/></div>
+    <div class="field"><label>Senha</label>
+      <div class="input-wrap"><input type="password" id="cred-pass" placeholder="••••••••" oninput="checkStrength(this.value)" autocomplete="off"/>
+      <button class="eye-btn" onclick="toggleEye('cred-pass',this)">👁</button></div>
+      <div class="strength-bar"><div class="strength-fill" id="sf"></div></div>
+      <div class="strength-label" id="sl"></div>
     </div>
-    <div class="field">
-      <label>Ícone</label>
-      <div class="emoji-grid" id="emoji-picker"></div>
-    </div>
-    <div class="field">
-      <label>Aba</label>
-      <select id="cred-tab"></select>
-    </div>
-    <div class="field">
-      <label>Site / URL</label>
-      <input type="text" id="cred-url" placeholder="https://..." />
-    </div>
-    <div class="field">
-      <label>Login / E-mail</label>
-      <input type="text" id="cred-login" placeholder="usuario@email.com" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Senha</label>
-      <div class="input-wrap">
-        <input type="password" id="cred-pass" placeholder="••••••••"
-          oninput="checkStrength(this.value)" autocomplete="off" />
-        <button class="toggle-vis" onclick="toggleVis('cred-pass',this)">👁</button>
-      </div>
-      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
-      <div class="strength-label" id="strength-label"></div>
-    </div>
-    <div class="field">
-      <label>Notas (opcional)</label>
-      <textarea id="cred-notes" rows="2" placeholder="informações extras..."></textarea>
-    </div>
+    <div class="field"><label>Notas (opcional)</label><textarea id="cred-notes" rows="2" placeholder="informações extras..."></textarea></div>
     <div class="modal-actions">
-      <button class="btn" onclick="saveCred()">Salvar</button>
+      <button class="btn" id="btn-save-cred" onclick="saveCred()">Salvar</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-cred')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- Add Tab Modal -->
+<!-- MODAL ABA -->
 <div class="modal-overlay" id="modal-tab">
-  <div class="modal" style="max-width:380px;">
+  <div class="modal" style="max-width:360px;">
     <div class="modal-title">Nova Aba</div>
-    <div class="field">
-      <label>Nome da Aba</label>
-      <input type="text" id="tab-name" placeholder="ex: Jogos, Trabalho, Social..." />
-    </div>
-    <div class="field">
-      <label>Ícone</label>
-      <div class="emoji-grid" id="tab-emoji-picker"></div>
-    </div>
+    <div class="field"><label>Nome</label><input type="text" id="tab-name" placeholder="ex: Jogos, Trabalho, Social..."/></div>
+    <div class="field"><label>Ícone</label><div class="emoji-grid" id="tab-emoji-picker"></div></div>
     <div class="modal-actions">
-      <button class="btn" onclick="saveTab()">Criar Aba</button>
+      <button class="btn" id="btn-save-tab" onclick="saveTab()">Criar</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-tab')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════
-//  STATE & STORAGE
-// ═══════════════════════════════════════════
-const EMOJIS = ['🌐','🎮','📧','💼','🏦','🎵','🛒','📱','🎬','🔧','🏠','🚗','✈️',
-                '💪','📚','🎨','🎯','💡','🔑','👤','🎲','🛡','💻','📷','🤝','🏆'];
+const SUPA_URL = 'https://qmminrxwqfowwqytlhja.supabase.co';
+const SUPA_KEY = 'sb_publishable_UAnDzENb07iWlDe_0ysQQA_Vue4i0gm';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
 
-let state = {
-  credentials: [],
-  tabs: [],
-};
+const EMOJIS = ['🌐','🎮','📧','💼','🏦','🎵','🛒','📱','🎬','🔧','🏠','🚗','✈️','💪','📚','🎨','🎯','💡','🔑','👤','🎲','🛡','💻','📷','🤝','🏆','🍕','⚽','🎸','🌙','☀️','🦊','🐉','💎','🔥','⚡'];
 
-let selectedEmoji = '🌐';
-let selectedTabEmoji = '📁';
-let currentTabEditId = null;
+let creds=[], tabs=[], currentUser=null, selEmoji='🌐', selTabEmoji='📁';
 
-function save() {
-  localStorage.setItem('vaultkey_data', JSON.stringify(state));
-}
-
-function load() {
-  const raw = localStorage.getItem('vaultkey_data');
-  if (raw) state = JSON.parse(raw);
-}
-
-function getAccount() {
-  const raw = localStorage.getItem('vaultkey_account');
-  return raw ? JSON.parse(raw) : null;
-}
-
-function saveAccount(user, passHash) {
-  localStorage.setItem('vaultkey_account', JSON.stringify({ user, pass: passHash }));
-}
-
-// Hash simples e confiável, sem btoa (que quebra com caracteres especiais)
-function hashPass(str) {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-    hash = hash & 0xffffffff;
-  }
-  return 'vk_' + Math.abs(hash).toString(36) + '_' + str.length;
-}
-
-// ═══════════════════════════════════════════
-//  AUTH
-// ═══════════════════════════════════════════
-function init() {
-  const acc = getAccount();
-  if (!acc) {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('setup-form').style.display = 'block';
-  } else {
-    // Migrar conta antiga que usava btoa
-    if (acc.pass && !acc.pass.startsWith('vk_')) {
-      // conta antiga detectada — pede para recriar
-      document.getElementById('login-form').style.display = 'none';
-      document.getElementById('setup-form').style.display = 'block';
-      document.getElementById('login-error').textContent = '⚠️ Conta antiga detectada. Recrie seu login abaixo.';
-      document.getElementById('login-error').style.display = 'block';
-      localStorage.removeItem('vaultkey_account');
-    }
-  }
-}
-
-function setupAccount() {
-  const user = document.getElementById('setup-user').value.trim();
-  const pass = document.getElementById('setup-pass').value;
-  const conf = document.getElementById('setup-confirm').value;
-  if (!user || pass.length < 4) { showToast('Usuário e senha (mín. 4 chars) obrigatórios.', 'error'); return; }
-  if (pass !== conf) { showToast('Senhas não conferem!', 'error'); return; }
-  saveAccount(user, hashPass(pass));
-  document.getElementById('setup-form').style.display = 'none';
-  document.getElementById('login-form').style.display = 'block';
-  document.getElementById('login-user').value = user;
-  document.getElementById('login-error').style.display = 'none';
-  showToast('Conta criada! Faça login.', 'success');
-}
-
-function doLogin() {
-  const acc = getAccount();
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const err = document.getElementById('login-error');
-
-  if (!acc) {
-    err.textContent = 'Nenhuma conta encontrada. Crie uma conta primeiro.';
-    err.style.display = 'block';
-    return;
-  }
-
-  if (user.toLowerCase() !== acc.user.toLowerCase() || hashPass(pass) !== acc.pass) {
-    err.textContent = 'Usuário ou senha incorretos.';
-    err.style.display = 'block';
-    return;
-  }
-
-  err.style.display = 'none';
-  load();
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('topbar-user').textContent = acc.user;
-  renderAll();
-  renderSidebar();
-  renderDashboard();
-}
-
-function doLogout() {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-pass').value = '';
-}
-
-function changePassword() {
-  const acc = getAccount();
-  const cur = document.getElementById('cur-pass').value;
-  const nw  = document.getElementById('new-pass').value;
-  const nw2 = document.getElementById('new-pass2').value;
-  if (hashPass(cur) !== acc.pass) { showToast('Senha atual incorreta.', 'error'); return; }
-  if (nw.length < 4) { showToast('Nova senha precisa ter mínimo 4 chars.', 'error'); return; }
-  if (nw !== nw2) { showToast('Senhas não conferem.', 'error'); return; }
-  saveAccount(acc.user, hashPass(nw));
-  showToast('Senha alterada com sucesso!', 'success');
-  ['cur-pass','new-pass','new-pass2'].forEach(id => document.getElementById(id).value = '');
-}
-
-// ═══════════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════════
-function goPage(id, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
-  document.getElementById('page-' + id)?.classList.add('active');
-  el?.classList.add('active');
-  if (id === 'all') renderAll();
-  if (id === 'dashboard') renderDashboard();
-  if (id === 'settings') renderTabManager();
-}
-
-function goTabPage(tabId, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
-  document.getElementById('page-tab-' + tabId)?.classList.add('active');
-  el?.classList.add('active');
-  renderTabPage(tabId);
-}
-
-// ═══════════════════════════════════════════
-//  TABS
-// ═══════════════════════════════════════════
-function renderSidebar() {
-  const el = document.getElementById('sidebar-tabs');
-  el.innerHTML = '';
-  state.tabs.forEach(tab => {
-    const d = document.createElement('div');
-    d.className = 'sidebar-item';
-    d.id = 'sidebar-tab-' + tab.id;
-    const count = state.credentials.filter(c => c.tabId === tab.id).length;
-    d.innerHTML = `<span class="item-icon">${tab.icon}</span> ${tab.name} <span class="badge">${count}</span>`;
-    d.onclick = () => goTabPage(tab.id, d);
-    el.appendChild(d);
+async function boot() {
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) { await enterApp(session.user); }
+  else { hide('loading'); show('auth-screen'); }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event==='SIGNED_IN' && session) { await enterApp(session.user); }
+    else if (event==='SIGNED_OUT') { creds=[]; tabs=[]; hide('app-screen'); show('auth-screen'); hide('loading'); }
   });
-  updateBadges();
 }
 
-function updateBadges() {
-  document.getElementById('badge-all').textContent = state.credentials.length;
+async function enterApp(user) {
+  currentUser = user;
+  hide('loading'); hide('auth-screen'); show('app-screen');
+  document.getElementById('topbar-email').textContent = user.email;
+  document.getElementById('settings-email').textContent = user.email;
+  await loadData();
+  renderSidebar(); renderAll(); renderDashboard(); rebuildTabPages();
 }
 
-function openTabModal() {
-  selectedTabEmoji = '📁';
-  renderEmojiPicker('tab-emoji-picker', true);
-  document.getElementById('tab-name').value = '';
-  document.getElementById('modal-tab').classList.add('open');
+async function loadData() {
+  const { data, error } = await sb.from('credentials').select('*').order('created_at',{ascending:false});
+  if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
+  const tabMap = {};
+  (data||[]).forEach(r => { if(r.tab_name){ const k=r.tab_name; tabMap[k]={name:r.tab_name,icon:r.tab_icon||'📁'}; }});
+  tabs = Object.values(tabMap).map(t=>({id:slugify(t.name),...t}));
+  creds = (data||[]).map(r=>({id:r.id,name:r.name,icon:r.icon||'🌐',tabId:r.tab_name?slugify(r.tab_name):null,tabName:r.tab_name||null,url:r.url||'',login:r.login||'',pass:r.pass||'',notes:r.notes||'',createdAt:r.created_at}));
 }
 
-function saveTab() {
-  const name = document.getElementById('tab-name').value.trim();
-  if (!name) { showToast('Nome da aba obrigatório.', 'error'); return; }
-  const tab = { id: Date.now().toString(), name, icon: selectedTabEmoji };
-  state.tabs.push(tab);
+function slugify(s){ return s.toLowerCase().replace(/\s+/g,'-').replace(/[^\w-]/g,''); }
 
-  // Create page
-  const pagesEl = document.getElementById('tab-pages');
-  const pg = document.createElement('div');
-  pg.className = 'page';
-  pg.id = 'page-tab-' + tab.id;
-  pg.innerHTML = `
-    <div class="page-header">
-      <div class="page-title">${tab.icon} ${tab.name}<small>// aba personalizada</small></div>
-      <button class="btn btn-sm" onclick="openAddModal('${tab.id}')">+ Nova Senha</button>
-    </div>
-    <div class="search-row">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-tab-${tab.id}" placeholder="buscar..." oninput="renderTabPage('${tab.id}')" />
-      </div>
-    </div>
-    <div class="creds-grid" id="grid-tab-${tab.id}"></div>
-  `;
-  pagesEl.appendChild(pg);
-
-  save();
-  renderSidebar();
-  closeModal('modal-tab');
-  showToast(`Aba "${name}" criada!`, 'success');
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',(i===0)===(tab==='login')));
+  document.getElementById('panel-login').classList.toggle('active',tab==='login');
+  document.getElementById('panel-register').classList.toggle('active',tab==='register');
+  clearAlerts();
 }
 
-function deleteTab(tabId) {
-  if (!confirm('Deletar esta aba? As senhas nela serão movidas para "Sem Aba".')) return;
-  state.credentials.forEach(c => { if (c.tabId === tabId) c.tabId = null; });
-  state.tabs = state.tabs.filter(t => t.id !== tabId);
-  const pg = document.getElementById('page-tab-' + tabId);
-  if (pg) pg.remove();
-  save();
-  renderSidebar();
-  renderTabManager();
-  goPage('dashboard', document.querySelector('.sidebar-item'));
-  showToast('Aba removida.', 'success');
+async function doLogin() {
+  const email=v('login-email'), pass=v('login-pass');
+  if(!email||!pass){showAlert('auth-error','Preencha e-mail e senha.');return;}
+  setBtnLoad('btn-login',true,'Entrando...');
+  const {error} = await sb.auth.signInWithPassword({email,password:pass});
+  setBtnLoad('btn-login',false,'Entrar');
+  if(error){showAlert('auth-error',tErr(error.message));}
 }
 
-function renderTabManager() {
-  const el = document.getElementById('tab-manager');
-  if (!el) return;
-  if (!state.tabs.length) { el.innerHTML = '<p style="font-size:13px;color:var(--muted);font-family:var(--mono);">Nenhuma aba criada.</p>'; return; }
-  el.innerHTML = state.tabs.map(t => `
-    <div class="tab-edit-row">
-      <span style="font-size:20px;">${t.icon}</span>
-      <span style="flex:1;font-size:14px;">${t.name}</span>
-      <button class="btn btn-sm btn-danger" onclick="deleteTab('${t.id}')">🗑 Deletar</button>
-    </div>
-  `).join('');
+async function doRegister() {
+  const email=v('reg-email'), pass=v('reg-pass'), pass2=v('reg-pass2');
+  if(!email||!pass){showAlert('auth-error','Preencha todos os campos.');return;}
+  if(pass!==pass2){showAlert('auth-error','Senhas não conferem.');return;}
+  if(pass.length<6){showAlert('auth-error','Mínimo 6 caracteres.');return;}
+  setBtnLoad('btn-register',true,'Criando...');
+  const {error} = await sb.auth.signUp({email,password:pass});
+  setBtnLoad('btn-register',false,'Criar Conta');
+  if(error){showAlert('auth-error',tErr(error.message));return;}
+  showAlert('auth-success','✅ Conta criada! Verifique seu e-mail para confirmar e depois faça login.');
 }
 
-// ═══════════════════════════════════════════
-//  CREDENTIALS
-// ═══════════════════════════════════════════
+async function doGoogleLogin() {
+  const {error} = await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+  if(error) showAlert('auth-error',tErr(error.message));
+}
+
+async function doLogout(){ await sb.auth.signOut(); }
+
+function tErr(m){
+  if(m.includes('Invalid login')) return 'E-mail ou senha incorretos.';
+  if(m.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if(m.includes('already registered')) return 'Este e-mail já está cadastrado.';
+  if(m.includes('valid email')) return 'Digite um e-mail válido.';
+  return m;
+}
+
 function openAddModal(defaultTabId) {
-  selectedEmoji = '🌐';
-  renderEmojiPicker('emoji-picker', false);
-  document.getElementById('modal-cred-title').textContent = 'Nova Credencial';
-  document.getElementById('edit-cred-id').value = '';
-  ['cred-name','cred-url','cred-login','cred-pass','cred-notes'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('strength-fill').style.width = '0%';
-  document.getElementById('strength-label').textContent = '';
+  selEmoji='🌐'; renderEmojiPicker('emoji-picker',false);
+  document.getElementById('modal-cred-title').textContent='Nova Credencial';
+  document.getElementById('edit-cred-id').value='';
+  ['cred-name','cred-url','cred-login','cred-pass','cred-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sf').style.width='0%'; document.getElementById('sl').textContent='';
   populateTabSelect(defaultTabId);
   document.getElementById('modal-cred').classList.add('open');
 }
 
 function openEditModal(id) {
-  const c = state.credentials.find(x => x.id === id);
-  if (!c) return;
-  selectedEmoji = c.icon || '🌐';
-  renderEmojiPicker('emoji-picker', false);
-  document.getElementById('modal-cred-title').textContent = 'Editar Credencial';
-  document.getElementById('edit-cred-id').value = id;
-  document.getElementById('cred-name').value = c.name || '';
-  document.getElementById('cred-url').value = c.url || '';
-  document.getElementById('cred-login').value = c.login || '';
-  document.getElementById('cred-pass').value = c.pass || '';
-  document.getElementById('cred-notes').value = c.notes || '';
-  checkStrength(c.pass || '');
-  populateTabSelect(c.tabId);
+  const c=creds.find(x=>x.id===id); if(!c) return;
+  selEmoji=c.icon; renderEmojiPicker('emoji-picker',false);
+  document.getElementById('modal-cred-title').textContent='Editar Credencial';
+  document.getElementById('edit-cred-id').value=id;
+  document.getElementById('cred-name').value=c.name;
+  document.getElementById('cred-url').value=c.url;
+  document.getElementById('cred-login').value=c.login;
+  document.getElementById('cred-pass').value=c.pass;
+  document.getElementById('cred-notes').value=c.notes;
+  checkStrength(c.pass); populateTabSelect(c.tabId);
   document.getElementById('modal-cred').classList.add('open');
 }
 
 function populateTabSelect(defaultTabId) {
-  const sel = document.getElementById('cred-tab');
-  sel.innerHTML = '<option value="">— Sem Aba —</option>';
-  state.tabs.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t.id;
-    opt.textContent = `${t.icon} ${t.name}`;
-    if (t.id === defaultTabId) opt.selected = true;
-    sel.appendChild(opt);
+  const sel=document.getElementById('cred-tab');
+  sel.innerHTML='<option value="">— Sem Aba —</option>';
+  tabs.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.icon+' '+t.name;if(t.id===defaultTabId)o.selected=true;sel.appendChild(o);});
+}
+
+async function saveCred() {
+  const name=document.getElementById('cred-name').value.trim();
+  if(!name){toast('Nome obrigatório.','error');return;}
+  const tabId=document.getElementById('cred-tab').value||null;
+  const tabObj=tabs.find(t=>t.id===tabId);
+  const editId=document.getElementById('edit-cred-id').value;
+  const payload={user_id:currentUser.id,name,icon:selEmoji,tab_name:tabObj?tabObj.name:null,tab_icon:tabObj?tabObj.icon:null,url:document.getElementById('cred-url').value.trim(),login:document.getElementById('cred-login').value.trim(),pass:document.getElementById('cred-pass').value,notes:document.getElementById('cred-notes').value.trim()};
+  setBtnLoad('btn-save-cred',true,'Salvando...');
+  let error;
+  if(editId){({error}=await sb.from('credentials').update(payload).eq('id',editId));}
+  else{({error}=await sb.from('credentials').insert(payload));}
+  setBtnLoad('btn-save-cred',false,'Salvar');
+  if(error){toast('Erro: '+error.message,'error');return;}
+  await loadData(); renderSidebar(); renderAll(); renderDashboard(); rebuildTabPages();
+  closeModal('modal-cred'); toast('Credencial salva!','success');
+}
+
+async function deleteCred(id) {
+  if(!confirm('Deletar esta credencial?')) return;
+  const {error}=await sb.from('credentials').delete().eq('id',id);
+  if(error){toast('Erro ao deletar.','error');return;}
+  await loadData(); renderSidebar(); renderAll(); renderDashboard(); rebuildTabPages();
+  toast('Removida.','success');
+}
+
+function openTabModal(){
+  selTabEmoji='📁'; renderEmojiPicker('tab-emoji-picker',true);
+  document.getElementById('tab-name').value='';
+  document.getElementById('modal-tab').classList.add('open');
+}
+
+function saveTab(){
+  const name=document.getElementById('tab-name').value.trim();
+  if(!name){toast('Nome obrigatório.','error');return;}
+  if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Aba já existe.','error');return;}
+  const newTab={id:slugify(name),name,icon:selTabEmoji};
+  tabs.push(newTab); buildTabPage(newTab); renderSidebar(); renderTabManager();
+  closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
+}
+
+async function deleteTab(tabId){
+  if(!confirm('Deletar aba? Credenciais nela ficam sem aba.')) return;
+  const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
+  const ids=creds.filter(c=>c.tabId===tabId).map(c=>c.id);
+  if(ids.length) await sb.from('credentials').update({tab_name:null,tab_icon:null}).in('id',ids);
+  tabs=tabs.filter(t=>t.id!==tabId);
+  document.getElementById('page-tab-'+tabId)?.remove();
+  await loadData(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
+  goPage('dashboard',document.querySelector('.sb-item')); toast('Aba removida.','success');
+}
+
+function rebuildTabPages(){
+  tabs.forEach(t=>{if(!document.getElementById('page-tab-'+t.id)) buildTabPage(t);});
+  renderSidebar();
+  tabs.forEach(t=>renderTabPage(t.id));
+}
+
+function buildTabPage(tab){
+  if(document.getElementById('page-tab-'+tab.id)) return;
+  const pg=document.createElement('div');
+  pg.className='page'; pg.id='page-tab-'+tab.id;
+  pg.innerHTML='<div class="page-header"><div class="page-title">'+tab.icon+' '+esc(tab.name)+'<small>// aba personalizada</small></div><button class="btn btn-sm" onclick="openAddModal(\''+tab.id+'\')">+ Nova Senha</button></div><div class="search-row"><div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="search-tab-'+tab.id+'" placeholder="buscar..." oninput="renderTabPage(\''+tab.id+'\')"/></div></div><div class="creds-grid" id="grid-tab-'+tab.id+'"></div>';
+  document.getElementById('tab-pages').appendChild(pg);
+}
+
+function renderSidebar(){
+  const el=document.getElementById('sidebar-tabs'); el.innerHTML='';
+  tabs.forEach(tab=>{
+    const count=creds.filter(c=>c.tabId===tab.id).length;
+    const d=document.createElement('div'); d.className='sb-item'; d.id='sb-tab-'+tab.id;
+    d.innerHTML='<span class="ic">'+tab.icon+'</span>'+esc(tab.name)+'<span class="sb-badge">'+count+'</span>';
+    d.onclick=()=>goTabPage(tab.id,d); el.appendChild(d);
   });
+  document.getElementById('badge-all').textContent=creds.length;
 }
 
-function saveCred() {
-  const name = document.getElementById('cred-name').value.trim();
-  if (!name) { showToast('Nome obrigatório.', 'error'); return; }
-  const id = document.getElementById('edit-cred-id').value || Date.now().toString();
-  const cred = {
-    id,
-    icon: selectedEmoji,
-    name,
-    url: document.getElementById('cred-url').value.trim(),
-    login: document.getElementById('cred-login').value.trim(),
-    pass: document.getElementById('cred-pass').value,
-    notes: document.getElementById('cred-notes').value.trim(),
-    tabId: document.getElementById('cred-tab').value || null,
-    createdAt: Date.now(),
-  };
-
-  const idx = state.credentials.findIndex(x => x.id === id);
-  if (idx >= 0) state.credentials[idx] = cred;
-  else state.credentials.push(cred);
-
-  save();
-  renderSidebar();
-  renderAll();
-  renderDashboard();
-  if (cred.tabId) renderTabPage(cred.tabId);
-  closeModal('modal-cred');
-  showToast('Credencial salva!', 'success');
-}
-
-function deleteCred(id) {
-  if (!confirm('Deletar esta credencial?')) return;
-  const c = state.credentials.find(x => x.id === id);
-  state.credentials = state.credentials.filter(x => x.id !== id);
-  save();
-  renderSidebar();
-  renderAll();
-  renderDashboard();
-  if (c?.tabId) renderTabPage(c.tabId);
-  showToast('Credencial removida.', 'success');
-}
-
-function renderCredGrid(creds, containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (!creds.length) {
-    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-      <div class="empty-icon">🔒</div>
-      <h3>Nenhuma credencial</h3>
-      <p>Clique em "+ Nova Senha" para adicionar a primeira.</p>
-    </div>`;
-    return;
-  }
-  el.innerHTML = creds.map(c => `
+function renderCredGrid(list,containerId){
+  const el=document.getElementById(containerId); if(!el) return;
+  if(!list.length){el.innerHTML='<div class="empty"><div class="ei">🔒</div><h3>Nenhuma credencial</h3><p>Clique em "+ Nova Senha" para adicionar.</p></div>';return;}
+  el.innerHTML=list.map(c=>`
     <div class="cred-card">
       <div class="cred-top">
-        <div class="cred-favicon">${c.icon || '🌐'}</div>
-        <div class="cred-info">
-          <div class="cred-name">${esc(c.name)}</div>
-          <div class="cred-url">${esc(c.url || '—')}</div>
-        </div>
+        <div class="cred-icon">${c.icon}</div>
+        <div class="cred-info"><div class="cred-name">${esc(c.name)}</div><div class="cred-url">${esc(c.url||'—')}</div></div>
       </div>
-      ${c.login ? `<div class="cred-field">
-        <div class="cred-field-label">Login / E-mail</div>
-        <div class="cred-field-val">
-          <span>${esc(c.login)}</span>
-          <button class="copy-btn" onclick="copyText('${esc(c.login)}',this)" title="Copiar">📋</button>
-        </div>
-      </div>` : ''}
-      ${c.pass ? `<div class="cred-field">
-        <div class="cred-field-label">Senha</div>
-        <div class="cred-field-val" id="pf-${c.id}">
-          <span id="pv-${c.id}">••••••••</span>
-          <button class="copy-btn" onclick="copyText('${esc(c.pass)}',this)" title="Copiar">📋</button>
-          <button class="copy-btn" onclick="togglePassVis('${c.id}','${esc(c.pass)}')" title="Ver">👁</button>
-        </div>
-      </div>` : ''}
-      ${c.notes ? `<div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:4px;">${esc(c.notes)}</div>` : ''}
+      ${c.login?`<div class="cred-field"><div class="cred-field-label">Login / E-mail</div><div class="cred-field-val"><span>${esc(c.login)}</span><button class="copy-btn" onclick="copyVal(${JSON.stringify(c.login)},this)">📋</button></div></div>`:''}
+      ${c.pass?`<div class="cred-field"><div class="cred-field-label">Senha</div><div class="cred-field-val"><span id="pv-${c.id}">••••••••</span><button class="copy-btn" onclick="copyVal(${JSON.stringify(c.pass)},this)">📋</button><button class="copy-btn" onclick="revealPass('${c.id}',${JSON.stringify(c.pass)})">👁</button></div></div>`:''}
+      ${c.notes?`<div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:6px;line-height:1.6;">${esc(c.notes)}</div>`:''}
       <div class="cred-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCred('${c.id}')">🗑</button>
-        ${c.url ? `<a href="${esc(c.url)}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">🌐</a>` : ''}
+        ${c.url?`<a href="${esc(c.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="text-decoration:none;">🌐</a>`:''}
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-function renderAll() {
-  const q = (document.getElementById('search-all')?.value || '').toLowerCase();
-  const creds = state.credentials.filter(c =>
-    !q || c.name?.toLowerCase().includes(q) || c.login?.toLowerCase().includes(q) || c.url?.toLowerCase().includes(q)
-  );
-  renderCredGrid(creds, 'all-grid');
+function renderAll(){
+  const q=(document.getElementById('search-all')?.value||'').toLowerCase();
+  renderCredGrid(creds.filter(c=>!q||c.name?.toLowerCase().includes(q)||c.login?.toLowerCase().includes(q)||c.url?.toLowerCase().includes(q)),'all-grid');
 }
 
-function renderTabPage(tabId) {
-  const q = (document.getElementById('search-tab-' + tabId)?.value || '').toLowerCase();
-  const creds = state.credentials.filter(c =>
-    c.tabId === tabId && (!q || c.name?.toLowerCase().includes(q) || c.login?.toLowerCase().includes(q))
-  );
-  renderCredGrid(creds, 'grid-tab-' + tabId);
+function renderTabPage(tabId){
+  const q=(document.getElementById('search-tab-'+tabId)?.value||'').toLowerCase();
+  renderCredGrid(creds.filter(c=>c.tabId===tabId&&(!q||c.name?.toLowerCase().includes(q)||c.login?.toLowerCase().includes(q))),'grid-tab-'+tabId);
 }
 
-function renderDashboard() {
-  // Stats
-  const statsEl = document.getElementById('stats-row');
-  const tabCount = state.tabs.length;
-  const credCount = state.credentials.length;
-  statsEl.innerHTML = `
-    <div class="stat-card"><div class="stat-label">Total de Senhas</div><div class="stat-val">${credCount}</div></div>
-    <div class="stat-card"><div class="stat-label">Abas Criadas</div><div class="stat-val">${tabCount}</div></div>
-    <div class="stat-card"><div class="stat-label">Sites Salvos</div><div class="stat-val">${state.credentials.filter(c=>c.url).length}</div></div>
-  `;
-  // Recent
-  const recent = [...state.credentials].sort((a,b) => (b.createdAt||0)-(a.createdAt||0)).slice(0,6);
-  renderCredGrid(recent, 'recent-grid');
+function renderDashboard(){
+  document.getElementById('stats-row').innerHTML=`<div class="stat-card"><div class="stat-label">Total Senhas</div><div class="stat-val">${creds.length}</div></div><div class="stat-card"><div class="stat-label">Abas</div><div class="stat-val">${tabs.length}</div></div><div class="stat-card"><div class="stat-label">Sites</div><div class="stat-val">${creds.filter(c=>c.url).length}</div></div>`;
+  renderCredGrid([...creds].slice(0,6),'recent-grid');
 }
 
-// ═══════════════════════════════════════════
-//  UI HELPERS
-// ═══════════════════════════════════════════
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function renderTabManager(){
+  const el=document.getElementById('tab-manager'); if(!el) return;
+  if(!tabs.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);font-family:var(--mono);">Nenhuma aba criada.</p>';return;}
+  el.innerHTML=tabs.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;margin-bottom:8px;"><span style="font-size:20px;">${t.icon}</span><span style="flex:1;font-size:14px;">${esc(t.name)}</span><button class="btn btn-danger btn-sm" onclick="deleteTab('${t.id}')">🗑 Deletar</button></div>`).join('');
 }
 
-function toggleVis(inputId, btn) {
-  const inp = document.getElementById(inputId);
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-  else { inp.type = 'password'; btn.textContent = '👁'; }
+function goPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active'); el?.classList.add('active');
+  if(id==='all') renderAll();
+  if(id==='dashboard') renderDashboard();
+  if(id==='settings') renderTabManager();
 }
 
-function togglePassVis(id, pass) {
-  const el = document.getElementById('pv-' + id);
-  if (el.textContent === '••••••••') el.textContent = pass;
-  else el.textContent = '••••••••';
+function goTabPage(tabId,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  document.getElementById('page-tab-'+tabId)?.classList.add('active'); el?.classList.add('active');
+  renderTabPage(tabId);
 }
 
-async function copyText(text, btn) {
-  try {
-    await navigator.clipboard.writeText(text);
-    const orig = btn.textContent;
-    btn.textContent = '✅';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
-  } catch { showToast('Não foi possível copiar.', 'error'); }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+function show(id){const el=document.getElementById(id);el.style.display='';el.classList.add('active');}
+function hide(id){const el=document.getElementById(id);el.classList.remove('active');if(el.id==='loading')el.style.display='none';}
+
+function toggleEye(inputId,btn){
+  const inp=document.getElementById(inputId);
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'👁':'🙈';
 }
-
-function checkStrength(pass) {
-  const fill = document.getElementById('strength-fill');
-  const label = document.getElementById('strength-label');
-  let score = 0;
-  if (pass.length >= 8) score++;
-  if (pass.length >= 12) score++;
-  if (/[A-Z]/.test(pass)) score++;
-  if (/[0-9]/.test(pass)) score++;
-  if (/[^A-Za-z0-9]/.test(pass)) score++;
-  const levels = [
-    { w:'0%', c:'transparent', t:'' },
-    { w:'20%', c:'#f87171', t:'Muito fraca' },
-    { w:'40%', c:'#fbbf24', t:'Fraca' },
-    { w:'60%', c:'#fbbf24', t:'Razoável' },
-    { w:'80%', c:'#4ade80', t:'Boa' },
-    { w:'100%', c:'#4ade80', t:'Forte 💪' },
-  ];
-  const lvl = levels[Math.min(score, 5)];
-  fill.style.width = lvl.w;
-  fill.style.background = lvl.c;
-  label.textContent = lvl.t;
-  label.style.color = lvl.c;
+function revealPass(id,pass){const el=document.getElementById('pv-'+id);el.textContent=el.textContent==='••••••••'?pass:'••••••••';}
+async function copyVal(text,btn){
+  try{await navigator.clipboard.writeText(text);const o=btn.textContent;btn.textContent='✅';setTimeout(()=>btn.textContent=o,1400);}
+  catch{toast('Não foi possível copiar.','error');}
 }
-
-function renderEmojiPicker(containerId, isTab) {
-  const el = document.getElementById(containerId);
-  const current = isTab ? selectedTabEmoji : selectedEmoji;
-  el.innerHTML = EMOJIS.map(e => `
-    <div class="emoji-opt ${e === current ? 'selected' : ''}"
-      onclick="pickEmoji('${e}', '${containerId}', ${isTab})">${e}</div>
-  `).join('');
+function checkStrength(pass){
+  let s=0;if(pass.length>=6)s++;if(pass.length>=10)s++;if(/[A-Z]/.test(pass))s++;if(/[0-9]/.test(pass))s++;if(/[^A-Za-z0-9]/.test(pass))s++;
+  const l=[{w:'0%',c:'transparent',t:''},{w:'20%',c:'#f87171',t:'Muito fraca'},{w:'40%',c:'#fbbf24',t:'Fraca'},{w:'60%',c:'#fbbf24',t:'Razoável'},{w:'80%',c:'#4ade80',t:'Boa'},{w:'100%',c:'#4ade80',t:'Forte 💪'}][Math.min(s,5)];
+  document.getElementById('sf').style.width=l.w;document.getElementById('sf').style.background=l.c;
+  document.getElementById('sl').textContent=l.t;document.getElementById('sl').style.color=l.c;
 }
-
-function pickEmoji(e, containerId, isTab) {
-  if (isTab) selectedTabEmoji = e;
-  else selectedEmoji = e;
-  renderEmojiPicker(containerId, isTab);
+function renderEmojiPicker(containerId,isTab){
+  const cur=isTab?selTabEmoji:selEmoji;
+  document.getElementById(containerId).innerHTML=EMOJIS.map(e=>`<div class="emoji-opt ${e===cur?'selected':''}" onclick="pickEmoji('${e}','${containerId}',${isTab})">${e}</div>`).join('');
 }
+function pickEmoji(e,containerId,isTab){if(isTab)selTabEmoji=e;else selEmoji=e;renderEmojiPicker(containerId,isTab);}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function clearAlerts(){['auth-error','auth-success'].forEach(id=>{const el=document.getElementById(id);el.style.display='none';el.textContent='';});}
+function setBtnLoad(btnId,loading,label){const btn=document.getElementById(btnId);btn.disabled=loading;btn.textContent=loading?'⏳ '+label:label.replace('ando...','').replace('ndo...','');}
+let toastT;
+function toast(msg,type='success'){const el=document.getElementById('toast');el.textContent=(type==='success'?'✅ ':'❌ ')+msg;el.className='show '+type;clearTimeout(toastT);toastT=setTimeout(()=>el.className='',2800);}
+function exportData(){const blob=new Blob([JSON.stringify(creds,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='vaultkey-backup.json';a.click();}
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-let toastTimer;
-function showToast(msg, type='success') {
-  const el = document.getElementById('toast');
-  el.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
-  el.className = 'show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 2800);
-}
-
-// Close modal on overlay click
-document.querySelectorAll('.modal-overlay').forEach(ov => {
-  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
-});
-
-// ═══════════════════════════════════════════
-//  IMPORT / EXPORT
-// ═══════════════════════════════════════════
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'vaultkey-backup.json';
-  a.click();
-}
-
-function clearAllData() {
-  if (!confirm('Isso apagará TODAS as senhas e abas. Tem certeza?')) return;
-  state = { credentials: [], tabs: [] };
-  save();
-  renderSidebar();
-  renderAll();
-  renderDashboard();
-  document.getElementById('tab-pages').innerHTML = '';
-  showToast('Dados apagados.', 'success');
-}
-
-// ═══════════════════════════════════════════
-//  BOOT
-// ═══════════════════════════════════════════
-init();
+boot();
 </script>
 </body>
 </html>
