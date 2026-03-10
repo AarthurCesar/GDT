@@ -313,11 +313,10 @@ async function enterApp(user) {
 }
 
 async function loadData() {
+  const { data: tabData } = await sb.from('tabs').select('*').order('created_at',{ascending:true});
+  tabs = (tabData||[]).map(r=>({id:r.id, name:r.name, icon:r.icon||'📁'}));
   const { data, error } = await sb.from('credentials').select('*').order('created_at',{ascending:false});
   if (error) { toast('Erro ao carregar: '+error.message,'error'); return; }
-  const tabMap = {};
-  (data||[]).forEach(r => { if(r.tab_name){ const k=r.tab_name; tabMap[k]={name:r.tab_name,icon:r.tab_icon||'📁'}; }});
-  tabs = Object.values(tabMap).map(t=>({id:slugify(t.name),...t}));
   creds = (data||[]).map(r=>({id:r.id,name:r.name,icon:r.icon||'🌐',tabId:r.tab_name?slugify(r.tab_name):null,tabName:r.tab_name||null,url:r.url||'',login:r.login||'',pass:r.pass||'',notes:r.notes||'',createdAt:r.created_at}));
 }
 
@@ -427,11 +426,13 @@ function openTabModal(){
   document.getElementById('modal-tab').classList.add('open');
 }
 
-function saveTab(){
+async function saveTab(){
   const name=document.getElementById('tab-name').value.trim();
   if(!name){toast('Nome obrigatório.','error');return;}
   if(tabs.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Aba já existe.','error');return;}
   const newTab={id:slugify(name),name,icon:selTabEmoji};
+  const {error}=await sb.from('tabs').insert({id:newTab.id,user_id:currentUser.id,name:newTab.name,icon:newTab.icon});
+  if(error){toast('Erro ao criar aba: '+error.message,'error');return;}
   tabs.push(newTab); buildTabPage(newTab); renderSidebar(); renderTabManager();
   closeModal('modal-tab'); toast('Aba "'+name+'" criada!','success');
 }
@@ -441,6 +442,7 @@ async function deleteTab(tabId){
   const tab=tabs.find(t=>t.id===tabId); if(!tab) return;
   const ids=creds.filter(c=>c.tabId===tabId).map(c=>c.id);
   if(ids.length) await sb.from('credentials').update({tab_name:null,tab_icon:null}).in('id',ids);
+  await sb.from('tabs').delete().eq('id',tabId).eq('user_id',currentUser.id);
   tabs=tabs.filter(t=>t.id!==tabId);
   document.getElementById('page-tab-'+tabId)?.remove();
   await loadData(); renderSidebar(); renderAll(); renderDashboard(); renderTabManager();
