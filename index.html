@@ -203,12 +203,29 @@
 
 <!-- ═══ MODAL SENHA MESTRE ═══ -->
 <div class="modal-overlay" id="modal-master" style="z-index:300;">
-  <div class="modal" style="max-width:400px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">📬</div>
-    <div class="modal-title" style="text-align:center;">Verificar dispositivo</div>
-    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin:12px 0 22px;line-height:1.8;" id="master-subtitle">
-      Enviamos um código de 6 dígitos para<br/>
-      <strong id="master-email-display" style="color:var(--accent2);"></strong>
+  <!-- STEP 1: show code -->
+  <div class="modal" style="max-width:420px;text-align:center;" id="master-step1">
+    <div style="font-size:40px;margin-bottom:8px;">🔐</div>
+    <div class="modal-title" style="text-align:center;">Novo dispositivo detectado</div>
+    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin:12px 0 18px;line-height:1.8;">
+      Este é seu código de acesso para este dispositivo.<br/>
+      <strong style="color:var(--accent2);">Anote-o em local seguro.</strong>
+    </div>
+    <div style="background:var(--surface2);border:2px solid var(--accent);border-radius:8px;padding:20px;margin-bottom:20px;">
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;letter-spacing:2px;">SEU CÓDIGO</div>
+      <div id="otp-display" style="font-size:32px;letter-spacing:10px;font-family:var(--mono);font-weight:700;color:var(--accent2);"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:20px;line-height:1.7;">
+      ⚠️ Se precisar acessar de outro dispositivo,<br/>use este código para verificar sua identidade.
+    </div>
+    <button class="btn" onclick="goToStep2()">Já anotei, entrar no cofre →</button>
+  </div>
+  <!-- STEP 2: confirm code -->
+  <div class="modal" style="max-width:420px;text-align:center;display:none;" id="master-step2">
+    <div style="font-size:40px;margin-bottom:8px;">✅</div>
+    <div class="modal-title" style="text-align:center;">Confirme o código</div>
+    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin:12px 0 22px;line-height:1.8;">
+      Digite o código que acabou de ver<br/>para confirmar que anotou.
     </div>
     <div class="field" style="text-align:left;">
       <label>Código de verificação</label>
@@ -218,11 +235,25 @@
     </div>
     <div style="font-size:11px;font-family:var(--mono);color:var(--red);margin-bottom:12px;display:none;" id="master-error"></div>
     <button class="btn" id="btn-master-ok" onclick="submitMasterCode()">Verificar e Entrar</button>
-    <div style="margin-top:14px;">
-      <span style="font-size:12px;color:var(--muted);font-family:var(--mono);cursor:pointer;" onclick="resendCode()">
-        Não recebeu? <span style="color:var(--accent2);">Reenviar código</span>
-      </span>
+    <div style="margin-top:12px;">
+      <span style="font-size:12px;color:var(--muted);font-family:var(--mono);cursor:pointer;" onclick="goBackStep1()">← Ver código novamente</span>
     </div>
+  </div>
+  <!-- STEP 3: returning device - just enter code -->
+  <div class="modal" style="max-width:420px;text-align:center;display:none;" id="master-step3">
+    <div style="font-size:40px;margin-bottom:8px;">🔑</div>
+    <div class="modal-title" style="text-align:center;">Verificar dispositivo</div>
+    <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin:12px 0 22px;line-height:1.8;">
+      Digite o código que você recebeu<br/>na primeira vez que usou o GDT.
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Código de verificação</label>
+      <input type="text" id="master-code-return" placeholder="000000" maxlength="6"
+        style="font-size:24px;letter-spacing:8px;text-align:center;font-family:var(--mono);"
+        onkeydown="if(event.key==='Enter')submitReturnCode()"/>
+    </div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--red);margin-bottom:12px;display:none;" id="master-error-return"></div>
+    <button class="btn" id="btn-master-return" onclick="submitReturnCode()">Entrar no Cofre</button>
   </div>
 </div>
 
@@ -530,96 +561,85 @@ async function getOrCreateCryptoKey() {
   masterKey = await deriveMasterKey(currentUser.id, salt);
 }
 
-async function sendOtp() {
-  pendingOtp = generateOtp();
-  // Store OTP in Supabase with expiry (5 min)
-  const expires = new Date(Date.now() + 5*60*1000).toISOString();
-  await sb.from('user_settings').upsert({
-    user_id: currentUser.id, key: 'otp_code',
-    value: JSON.stringify({ code: pendingOtp, expires })
-  });
-  // Send via Supabase edge function or directly via email
-  // We use Supabase's built-in magic link as the email trigger
-  await sb.auth.signInWithOtp({ email: currentUser.email, options: { shouldCreateUser: false } });
-  // But we also send our custom OTP via a simple approach:
-  // Store it and show it in the modal (Supabase will send the code)
-  // Actually use our own stored OTP shown to user after email
-}
-
 async function openMasterModal() {
   await getOrCreateCryptoKey();
 
   if (isDeviceTrusted()) {
-    // Device already verified, go straight in
     await proceedToApp();
     return;
   }
 
-  // New device: send OTP
-  pendingOtp = generateOtp();
-  const expires = new Date(Date.now() + 10*60*1000).toISOString();
-  await sb.from('user_settings').upsert({
-    user_id: currentUser.id, key: 'otp_code',
-    value: JSON.stringify({ code: pendingOtp, expires })
-  });
+  // Check if user already has a code stored (returning user on new device)
+  const { data } = await sb.from('user_settings').select('value')
+    .eq('user_id', currentUser.id).eq('key', 'otp_code').maybeSingle();
 
-  // Send email via Supabase (using auth OTP)
-  await sb.auth.signInWithOtp({ email: currentUser.email, options: { shouldCreateUser: false } });
+  const hasCode = data?.value && data.value !== '';
 
-  document.getElementById('master-email-display').textContent = currentUser.email;
-  document.getElementById('master-error').style.display = 'none';
-  document.getElementById('master-code').value = '';
+  if (hasCode) {
+    // Returning user on new device: ask for their saved code
+    showStep(3);
+  } else {
+    // First time ever: generate and show code
+    pendingOtp = generateOtp();
+    await sb.from('user_settings').upsert({
+      user_id: currentUser.id, key: 'otp_code',
+      value: pendingOtp
+    });
+    document.getElementById('otp-display').textContent = pendingOtp;
+    showStep(1);
+  }
+
   document.getElementById('modal-master').classList.add('open');
-  setTimeout(()=>document.getElementById('master-code').focus(), 200);
 }
+
+function showStep(n) {
+  ['master-step1','master-step2','master-step3'].forEach((id,i)=>{
+    document.getElementById(id).style.display = (i===n-1) ? 'block' : 'none';
+  });
+}
+
+function goToStep2() {
+  document.getElementById('master-code').value = '';
+  document.getElementById('master-error').style.display = 'none';
+  showStep(2);
+  setTimeout(()=>document.getElementById('master-code').focus(), 100);
+}
+
+function goBackStep1() { showStep(1); }
 
 async function submitMasterCode() {
   const code = document.getElementById('master-code').value.trim();
   const errEl = document.getElementById('master-error');
   errEl.style.display = 'none';
 
-  if (code.length !== 6) {
-    errEl.textContent = 'Digite o código de 6 dígitos.';
+  if (code !== pendingOtp) {
+    errEl.textContent = '❌ Código incorreto. Tente novamente.';
     errEl.style.display = 'block'; return;
   }
 
-  setBtnLoad('btn-master-ok', true, 'Verificando...');
-
-  // Check OTP from Supabase
-  const { data } = await sb.from('user_settings').select('value')
-    .eq('user_id', currentUser.id).eq('key', 'otp_code').maybeSingle();
-
-  setBtnLoad('btn-master-ok', false, 'Verificar e Entrar');
-
-  if (!data?.value) {
-    errEl.textContent = '❌ Código expirado. Reenvie.';
-    errEl.style.display = 'block'; return;
-  }
-
-  const { code: storedCode, expires } = JSON.parse(data.value);
-
-  if (new Date() > new Date(expires)) {
-    errEl.textContent = '❌ Código expirado. Clique em reenviar.';
-    errEl.style.display = 'block'; return;
-  }
-
-  if (code !== storedCode) {
-    errEl.textContent = '❌ Código incorreto.';
-    errEl.style.display = 'block'; return;
-  }
-
-  // Valid! Trust this device
   trustDevice();
-  await sb.from('user_settings').upsert({ user_id: currentUser.id, key: 'otp_code', value: '' });
   document.getElementById('modal-master').classList.remove('open');
   await proceedToApp();
 }
 
-async function resendCode() {
-  document.getElementById('master-error').style.display = 'none';
-  document.getElementById('master-code').value = '';
-  toast('Reenviando código...', 'success');
-  await openMasterModal();
+async function submitReturnCode() {
+  const code = document.getElementById('master-code-return').value.trim();
+  const errEl = document.getElementById('master-error-return');
+  errEl.style.display = 'none';
+
+  setBtnLoad('btn-master-return', true, 'Verificando...');
+  const { data } = await sb.from('user_settings').select('value')
+    .eq('user_id', currentUser.id).eq('key', 'otp_code').maybeSingle();
+  setBtnLoad('btn-master-return', false, 'Entrar no Cofre');
+
+  if (!data?.value || code !== data.value) {
+    errEl.textContent = '❌ Código incorreto.';
+    errEl.style.display = 'block'; return;
+  }
+
+  trustDevice();
+  document.getElementById('modal-master').classList.remove('open');
+  await proceedToApp();
 }
 
 async function proceedToApp() {
