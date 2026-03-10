@@ -506,48 +506,35 @@ function hideLoading(){
 }
 
 // ─── BOOT ───
-let _booting = false; // lock para evitar duplo enterApp
-
 async function boot() {
   console.log('[GDT] boot start');
 
-  // SIGNED_IN = OAuth redirect ou token renovado com sessão válida
-  // Não usar INITIAL_SESSION pois o token ainda não está pronto
-  sb.auth.onAuthStateChange(async (event, session) => {
-    console.log('[GDT] authStateChange:', event, !!session);
-    if (event === 'SIGNED_IN' && session) {
-      if (_booting || currentUser) return; // já está carregando
-      _booting = true;
-      history.replaceState(null, '', window.location.pathname);
-      await enterApp(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      _booting = false;
+  // Listener só para logout
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
       creds=[]; tabs=[]; currentUser=null;
       hide('app-screen');
       show('auth-screen');
     }
   });
 
-  // Aguarda SIGNED_IN processar (vem do hash OAuth ou sessão salva)
-  await new Promise(r => setTimeout(r, 1200));
-
-  // Fallback: se SIGNED_IN não disparou, tenta getSession manualmente
-  if (!currentUser && !_booting) {
-    console.log('[GDT] fallback: getSession');
+  // Tenta pegar sessão diretamente, com retry
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 500));
     try {
       const { data:{ session } } = await sb.auth.getSession();
-      console.log('[GDT] getSession result:', !!session);
-      if (session) {
-        _booting = true;
+      console.log('[GDT] getSession attempt', i+1, !!session, session?.user?.email);
+      if (session?.user && session?.access_token) {
         await enterApp(session.user);
-      } else {
-        hide('loading'); show('auth-screen');
+        return;
       }
     } catch(e) {
-      console.error('[GDT] getSession error:', e);
-      hide('loading'); show('auth-screen');
+      console.warn('[GDT] getSession error:', e.message);
     }
   }
+
+  // Nenhuma sessão após 5 tentativas
+  hide('loading'); show('auth-screen');
 }
 
 async function enterApp(user) {
